@@ -1,1 +1,4 @@
+.venv/
+__pycache__/
+.env
 whoop_data.csv
