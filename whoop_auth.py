@@ -1,6 +1,7 @@
 """Run `python whoop_auth.py` to connect your WHOOP account once."""
 
 import json
+import math
 import os
 from pathlib import Path
 import secrets
@@ -142,13 +143,19 @@ def exchange_code(config, code):
     except (requests.RequestException, ValueError):
         # Exception text and response bodies may contain sensitive information.
         raise AuthError("Could not retrieve tokens from WHOOP. Check your connection and retry.") from None
+    return normalize_tokens(tokens)
+
+
+def normalize_tokens(tokens):
+    """Validate and retain only the documented token fields."""
     if not isinstance(tokens, dict) or any(
         not isinstance(tokens.get(key), str) or not tokens[key]
         for key in ("access_token", "refresh_token")
     ):
         raise AuthError("WHOOP did not return access and refresh tokens. Retry with offline access enabled.")
     expiry = tokens.get("expires_in")
-    if isinstance(expiry, bool) or not isinstance(expiry, (int, float)) or expiry <= 0:
+    if (isinstance(expiry, bool) or not isinstance(expiry, (int, float))
+            or not math.isfinite(expiry) or expiry <= 0):
         raise AuthError("WHOOP returned an invalid token expiry. Please retry.")
     # Save only expected fields, never arbitrary response content.
     return {
@@ -159,6 +166,50 @@ def exchange_code(config, code):
         "expires_in": expiry,
         "expires_at": time.time() + expiry,
     }
+
+
+def load_tokens(token_file=TOKEN_FILE):
+    try:
+        with token_file.open(encoding="utf-8") as file:
+            tokens = json.load(file)
+    except (OSError, ValueError):
+        raise AuthError("Could not read whoop_tokens.json. Run python whoop_auth.py to connect.") from None
+    if not isinstance(tokens, dict) or any(
+        not isinstance(tokens.get(key), str) or not tokens[key].strip()
+        for key in ("access_token", "refresh_token")
+    ):
+        raise AuthError("Invalid saved tokens. Run python whoop_auth.py to reconnect.")
+    return tokens
+
+
+def refresh_tokens(tokens, token_file=TOKEN_FILE):
+    config = read_config()
+    try:
+        with requests.post(
+            TOKEN_URL,
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": tokens["refresh_token"],
+                "client_id": config["WHOOP_CLIENT_ID"],
+                "client_secret": config["WHOOP_CLIENT_SECRET"],
+                "scope": "offline",
+            },
+            timeout=30,
+            allow_redirects=False,
+        ) as response:
+            if response.status_code in (400, 401):
+                raise AuthError("WHOOP rejected token refresh. Run python whoop_auth.py to reconnect.")
+            if response.status_code != 200:
+                raise AuthError("WHOOP token refresh failed. Please try again later.")
+            refreshed = normalize_tokens(response.json())
+    except (requests.RequestException, ValueError):
+        raise AuthError("Could not refresh WHOOP tokens. Check your connection and retry.") from None
+    # WHOOP rotates BOTH tokens. Persist before using the new access token.
+    try:
+        save_tokens(refreshed, token_file)
+    except OSError:
+        raise AuthError("Could not save refreshed tokens. Check file permissions and reconnect with python whoop_auth.py.") from None
+    return refreshed
 
 
 def save_tokens(tokens, token_file=TOKEN_FILE):

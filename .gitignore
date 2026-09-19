@@ -4,3 +4,7 @@ __pycache__/
 whoop_data.csv
 whoop_tokens.json
 whoop_tokens.json.*.tmp
+# Reserved for local personal API exports; the fetch command keeps responses in memory.
+whoop_responses/
+whoop_data*.json
+whoop_response*.json
