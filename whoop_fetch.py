@@ -76,7 +76,11 @@ def latest_summary(client):
         raise APIError("WHOOP returned an unexpected cycle collection.")
     if not records:
         return None
-    cycle = records[0]
+    return cycle_summary(client, records[0])
+
+
+def cycle_summary(client, cycle):
+    """Fetch matching recovery and primary sleep for one cycle."""
     if not isinstance(cycle, dict) or type(cycle.get("id")) is not int:
         raise APIError("WHOOP returned an invalid cycle.")
     cycle_id = cycle["id"]
@@ -90,15 +94,7 @@ def latest_summary(client):
         recovery is not None and recovery.get("sleep_id") != sleep.get("id")
     )):
         raise APIError("WHOOP returned inconsistent sleep and recovery data. Please retry.")
-    try:
-        start = datetime.fromisoformat(cycle["start"].replace("Z", "+00:00"))
-        offset = cycle["timezone_offset"]
-        zone = datetime.fromisoformat("2000-01-01T00:00:00" + offset).tzinfo
-        if start.tzinfo is None or zone is None:
-            raise ValueError
-        day = start.astimezone(zone).date().isoformat()
-    except (KeyError, TypeError, ValueError, AttributeError):
-        raise APIError("WHOOP returned an invalid cycle date or timezone.") from None
+    day = cycle_date(cycle)
     return {
         "date": day,
         "in_progress": cycle.get("end") is None,
@@ -108,6 +104,20 @@ def latest_summary(client):
         "day_strain": metric(cycle, "strain"),
         "sleep_performance": metric(sleep, "sleep_performance_percentage"),
     }
+
+
+def cycle_date(cycle):
+    """Use the physiological cycle's start in its recorded WHOOP timezone."""
+    try:
+        start = datetime.fromisoformat(cycle["start"].replace("Z", "+00:00"))
+        offset = cycle["timezone_offset"]
+        zone = datetime.fromisoformat("2000-01-01T00:00:00" + offset).tzinfo
+        if start.tzinfo is None or zone is None:
+            raise ValueError
+        day = start.astimezone(zone).date().isoformat()
+    except (KeyError, TypeError, ValueError, AttributeError):
+        raise APIError("WHOOP returned an invalid cycle date or timezone.") from None
+    return day
 
 
 def print_summary(summary):

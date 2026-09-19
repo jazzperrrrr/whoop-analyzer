@@ -58,6 +58,80 @@ responses as test fixtures. Errors omit response bodies and credentials.
 If refresh is rejected, reconnect with `python whoop_auth.py`. Network or rate-limit
 errors can be retried later. No additional dependencies are needed.
 
+## Collect historical WHOOP measurements
+
+Run `python whoop_history.py` for today and the previous 29 reporting dates.
+For the fixed investigation period, run:
+
+```sh
+python whoop_history.py --end-date 2026-09-19 --days 30
+```
+
+The minimum window is 30 days. Run only one authentication/fetch/history process
+at a time. The existing client handles authentication and token rotation; no new
+permissions or dependencies are required. All API operations on health data are
+GET requests. Neither `whoop_history.csv` nor `whoop_data.csv` is written or migrated.
+
+The collector writes four Git-ignored personal files under `data/`:
+
+| File | Identity | Contents |
+| --- | --- | --- |
+| `cycles.csv` | `cycle_id` (WHOOP `cycle.id`) | Original start/end, recorded offset, timestamps, score state, strain |
+| `sleeps.csv` | `sleep_id` (WHOOP `sleep.id`) | Cycle relationship, original start/end, own offset, primary/nap flag, score state, performance |
+| `recoveries.csv` | `cycle_id` | Associated `sleep_id`, creation/update times, score state, recovery/HRV/RHR |
+| `daily_metrics.csv` | `(cycle_id, sleep_id)` | Derived report date, joined measurements, timestamps, separate sleep/cycle offsets and availability flags |
+
+These are normalized, allowlisted entities, not full raw API responses. Recovery
+has no independent start/end or timezone in the API; its referenced sleep supplies
+the reporting timestamp. The files contain private health data and remain local.
+No credentials or raw responses are logged or exported.
+
+A physiological cycle is not a calendar day. WHOOP documents that a primary sleep
+starts a cycle, and recovery describes readiness after waking:
+[cycles](https://developer.whoop.com/docs/developing/user-data/cycle/),
+[sleep](https://developer.whoop.com/docs/developing/user-data/sleep/),
+[recovery](https://developer.whoop.com/docs/developing/user-data/recovery/).
+
+The daily report uses the **primary sleep's end date in that sleep's recorded
+UTC offset**. Joins use IDs, never dates. Cycle strain stays attached to its
+original cycle. Multiple cycles may produce rows with the same report date;
+no cycle is discarded and strain is not summed or apportioned across days.
+The cycle and sleep offsets can differ during travel. Neither is replaced with
+the computer's current timezone. This rule is explicit reporting policy, not a
+guarantee of identical date labels in every WHOOP mobile-app travel scenario.
+
+The collector paginates cycles, sleeps, and recoveries using `next_token` as the
+next request's `nextToken`. UTC query bounds extend one day before the first
+report date and through midnight two days after the last. ID lookups complete
+relationships absent from collection results, including boundary records. The
+reporting window is applied only after computing the local sleep-end date.
+Boundary entities are retained even if they do not produce rows in the report.
+
+Missing, unscored, or invalid measurements are blank, never invented or zero-filled.
+A primary sleep without recovery still produces a row with blank recovery metrics.
+Cycles and recoveries without primary sleep remain in entity storage, without an
+invented report date. Naps remain separate sleep events and never generate a daily
+recovery. Days with only naps or an ongoing multi-day cycle may have no daily row.
+
+Entity files are cumulative archives: repeat fetches upsert by ID, including
+blanked measurements and changed recovery/sleep relationships. Records not returned
+remain archived; this is not a deletion-synchronization service. The daily report
+is rebuilt from the **current collection** for the requested window, so absent
+recoveries are not filled from an older archive. Changing the window replaces
+that derived report; it does not erase the entity archive. Identical input gives
+identical files and no duplicate entity or relationship rows.
+
+All downloads and validation finish before saving. Existing malformed entity files
+are rejected. All four files are staged before replacement; each file replacement
+is atomic, but the four CSVs are not a single database transaction. If a disk write
+is interrupted, rerun collection before reading the dataset. API/authentication
+failures leave existing outputs untouched. The command prints counts only.
+
+The old date-keyed history cannot recover discarded identities. Keep it for
+comparison and rebuild corrected data from the API; do not relabel its rows as a
+migration. The latest-cycle display command remains a cycle-start-labelled view,
+separate from the historical report.
+
 ## Run checks
 
 After installing the dependencies, run `python -m unittest discover -s tests -v`.
