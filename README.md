@@ -132,6 +132,75 @@ comparison and rebuild corrected data from the API; do not relabel its rows as a
 migration. The latest-cycle display command remains a cycle-start-labelled view,
 separate from the historical report.
 
+## Analyze personal baselines
+
+Run `python whoop_analysis.py` to print an offline report using
+`data/daily_metrics.csv`. An alternative input can be supplied with
+`--input path/to/daily_metrics.csv`. The default path is relative to the project,
+not the terminal's working directory. Analysis never writes files, reads credentials,
+or calls an external API. It uses only the Python standard library.
+
+For HRV, resting heart rate, recovery, sleep performance, and cycle strain, the
+module calculates rolling 7-, 14-, and 30-calendar-day averages. For a report date
+D, each window includes D minus N days through D minus one day. The report date
+itself and later dates are excluded. Existing `report_date` labels are used as-is;
+timestamps are not converted again using the computer's timezone.
+
+The concise terminal report interprets every cycle/sleep row on the latest available
+date using the 14-day baseline. Add `--details` to include all numeric comparisons
+for the 7-, 14-, and 30-day windows. Distinct relationships are preserved. Within a historical
+date, available measurements are averaged per metric before averaging across
+dates, giving each date equal weight. Repeated strain/recovery measurements for
+the same cycle on the same date count once; sleep performance is keyed by sleep
+ID. These analytical means are not new WHOOP entities or summed strain totals.
+Conflicting values for the same entity/date are rejected.
+
+Missing values and dates are not filled, zeroed, or replaced with older values.
+Each metric shows its own available-day count; a baseline with fewer than N
+observed days is explicitly marked partial. Even one prior observation can form
+a partial baseline, while zero observations produces N/A. The 30-day history
+export normally supplies at most 29 previous days for its latest date; collect a
+longer window if a full 30-day baseline is needed.
+
+Differences use the metric's units (percentage points for recovery and sleep
+performance). Relative deviation is `(current - baseline) / baseline * 100`;
+it is N/A when either value is missing or the baseline is zero. An unfinished
+cycle's strain is labelled provisional/current load and never contributes to the
+overall state or morning readiness.
+
+Interpretation uses explicit descriptive project rules, not clinical cutoffs.
+`SIGNAL_RULES`, `INTERPRETATION_WINDOW`, and `MIN_BASELINE_DAYS` in
+`whoop_analysis.py` centralize the policy. Each signal needs its latest value and
+at least **7 observed days within the previous 14 calendar days**. HRV also needs
+a nonzero baseline for its relative comparison. Missing or insufficient signals
+remain unclassified; partial numeric baselines are still available with `--details`.
+
+| Signal | Positive relative to baseline | Negative relative to baseline |
+| --- | --- | --- |
+| HRV (physiological) | Increase of at least 10% | Decrease of at least 10% |
+| Resting heart rate (physiological) | Decrease of at least 3 bpm | Increase of at least 3 bpm |
+| Sleep performance (sleep context) | Increase of at least 5 percentage points | Decrease of at least 5 percentage points |
+| WHOOP Recovery (separate signal) | Increase of at least 10 percentage points | Decrease of at least 10 percentage points |
+
+Changes inside these inclusive boundaries are neutral. These labels describe
+direction relative to personal baseline, not absolute health or sleep adequacy.
+Overall state requires both physiological signals and at least one context signal:
+
+- **Strong positive/negative:** all four signals agree in that direction.
+- **Generally positive/negative:** at least one signal points in that direction,
+  with the others neutral or unavailable and none pointing the opposite way.
+- **Mixed:** positive and negative signals coexist, with their names and directions
+  explained; or all classified signals are neutral, explicitly reported as no clear direction.
+- **Insufficient data:** the overall coverage requirement is unmet. Any available
+  conflicting signals are still explained independently.
+
+The report separates physiology, sleep, WHOOP Recovery, and current load. It makes
+no diagnoses, causal claims, or recommendations and uses no external services.
+
+Malformed CSVs, invalid/nonfinite/negative numbers, duplicate relationship rows,
+and invalid dates/IDs fail with safe errors instead of silently biasing averages.
+Additional metadata columns from the history model are accepted.
+
 ## Run checks
 
 After installing the dependencies, run `python -m unittest discover -s tests -v`.
