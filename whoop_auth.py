@@ -20,7 +20,7 @@ TOKEN_FILE = PROJECT_DIR / "whoop_tokens.json"
 REDIRECT_URI = "http://localhost:8080/callback"
 AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth"
 TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token"
-SCOPES = "read:recovery read:cycles read:sleep offline"
+SCOPES = "read:recovery read:cycles read:sleep read:workout offline"
 
 
 class AuthError(Exception):

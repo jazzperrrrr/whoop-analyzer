@@ -25,8 +25,8 @@ The temporary server listens only on your computer at port 8080 and closes after
 the callback, timeout, or cancellation. If the port is busy, close the app using it
 and retry. A failed or cancelled attempt does not overwrite existing tokens.
 
-The requested permissions are `read:recovery`, `read:cycles`, `read:sleep`, and
-`offline`. WHOOP requires `offline` to issue a refresh token. See the official
+The requested permissions are `read:recovery`, `read:cycles`, `read:sleep`,
+`read:workout`, and `offline`. WHOOP requires `offline` to issue a refresh token. See the official
 [scope reference](https://developer.whoop.com/api/) and
 [OAuth documentation](https://developer.whoop.com/docs/developing/oauth/).
 
@@ -131,6 +131,60 @@ The old date-keyed history cannot recover discarded identities. Keep it for
 comparison and rebuild corrected data from the API; do not relabel its rows as a
 migration. The latest-cycle display command remains a cycle-start-labelled view,
 separate from the historical report.
+
+## Collect workout / activity history
+
+Run `python whoop_workouts.py --days 30` to collect workouts starting within the
+trailing 30 x 24 hours, ending at the current UTC instant. A fixed inclusive UTC
+calendar-date range is also supported:
+
+```sh
+python whoop_workouts.py --start-date 2026-08-21 --end-date 2026-09-20
+python whoop_workouts.py --end-date 2026-09-20 --days 30
+```
+
+`--start-date` requires `--end-date` and cannot be combined with `--days`.
+Days must be positive. Explicit dates describe UTC bounds, not local report dates;
+an inclusive end date becomes midnight of the following day, exclusive.
+The collector paginates `GET /developer/v2/activity/workout`, filters by UTC start
+time, and writes only `data/workouts.csv`. The existing OAuth client is reused;
+enable `read:workout` in the Developer App and reauthorize with `python whoop_auth.py`
+if your connection lacks it. Normal authenticated runs may rotate the local token
+file. Run one authentication/collection process at a time.
+
+The Git-ignored CSV is a cumulative entity archive with one row per workout UUID:
+
+| Columns | Meaning |
+| --- | --- |
+| `workout_id`, `sport_name`, `sport_id` | UUID identity and original WHOOP activity fields |
+| `start`, `end`, `timezone_offset` | UTC ISO timestamps and the workout's original recorded offset |
+| `local_start`, `local_end`, `report_date` | Offset-aware local timestamps; report date is the local **start** date |
+| `duration_seconds`, `created_at`, `updated_at`, `score_state` | Elapsed duration, UTC source metadata, scoring status |
+| `strain`, `average_heart_rate`, `max_heart_rate` | Workout strain and heart rates in bpm |
+| `kilojoule`, `kcal`, `percent_recorded` | Original energy, kcal = kilojoule / 4.184, raw recording coverage |
+| `distance_meter`, `altitude_gain_meter`, `altitude_change_meter` | Nullable distance/elevation; altitude change may be negative |
+| `zone_zero_milli` through `zone_five_milli` | Six HR-zone durations in milliseconds |
+
+Local timestamps always use the individual workout's recorded offset, never the
+computer's current timezone. A workout crossing midnight retains both local dates
+and one start-date reporting label. Offsets do not identify geographic locations
+or establish timezone transitions within a workout. Activity names are preserved:
+`activity` is not inferred to mean strength training. Future custom categories
+belong in a separate derived layer; no cycle relationship is guessed from dates.
+
+Missing values serialize as blank, while real zero values remain zero. Pending or
+unscorable workouts retain metadata with blank score metrics. Invalid nonfinite
+or malformed numeric values fail safely. Recording coverage is stored unchanged,
+without assuming a percent-versus-fraction scale. Zone totals are not forced to
+equal elapsed duration. No sets, repetitions, load, or HR samples are invented.
+
+Reruns upsert by UUID and retain newer `updated_at` versions, including across
+pages and existing archives. Records outside the requested window remain archived;
+missing API records are not treated as deletions. Identical input produces identical
+CSV bytes. The entire collection is validated before saving; malformed existing
+CSVs are rejected, and the single CSV is replaced atomically. Other entity and
+legacy CSVs are untouched. Raw API responses remain in memory, never on disk.
+Console output contains the query window, counts, and original activity names.
 
 ## Analyze personal baselines
 

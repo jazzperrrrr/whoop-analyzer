@@ -32,7 +32,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(auth.read_config(env), self.config)
         url = auth.authorization_url(self.config, "state123")
         query = parse_qs(urlsplit(url).query)
-        self.assertEqual(query["scope"], ["read:recovery read:cycles read:sleep offline"])
+        self.assertEqual(query["scope"], ["read:recovery read:cycles read:sleep read:workout offline"])
         self.assertEqual(query["redirect_uri"], [auth.REDIRECT_URI])
         self.assertNotIn(self.config["WHOOP_CLIENT_SECRET"], url)
         env.write_text("WHOOP_CLIENT_ID=test-client\n")
