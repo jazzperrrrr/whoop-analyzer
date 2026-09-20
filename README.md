@@ -186,6 +186,59 @@ CSVs are rejected, and the single CSV is replaced atomically. Other entity and
 legacy CSVs are untouched. Raw API responses remain in memory, never on disk.
 Console output contains the query window, counts, and original activity names.
 
+## Analyze workouts (read only)
+
+Run `python whoop_workout_analysis.py` for observed 7-, 14-, and 30-calendar-day
+summaries ending on the latest local workout date. Use `--as-of YYYY-MM-DD` to
+choose another anchor. `--workouts`, `--daily-metrics`, and `--classifications`
+accept alternative input paths; defaults are relative to the project `data/`.
+This command makes no API calls and writes no files. It prints aggregate results,
+never individual workout UUIDs or raw physiological records.
+
+The pipeline is normalized workouts -> canonical classification -> individual
+record analysis -> daily aggregation -> rolling summaries -> exact D+1 pairing.
+It does not change the physiological readiness rules or predict recovery.
+
+Personal classifications live separately in Git-ignored
+`data/workout_classifications.csv`, with columns `workout_id`, `recorded_activity`,
+`canonical_activity`, `provenance`, and `classification_version`. Corrections
+apply only to the listed UUID and matching original label. Provenance is
+`original_label`, `user_confirmed`, `user_confirmed_category`, or `unresolved`.
+User-confirmed corrections and category assignments apply only to reviewed UUIDs.
+No personal UUIDs or classification records belong in source code or tests.
+Future unreviewed Pickleball/Squash retain their original sport identities; an
+absent sidecar applies no corrections and prints a notice. Original labels are
+always retained. Removing a correction reverses that classification without
+changing `workouts.csv`. Unspecified Activity defaults to Unknown, included in
+overall totals but excluded from named-sport attribution.
+
+Every UUID stays separate with an unset training-session ID and unreviewed
+grouping status. Record counts do not claim to count real-world sessions. Reports
+also expose distinct training dates and gaps between those dates. Daily summaries
+use local start dates from each workout's own offset, retain UUID provenance, and
+flag mixed offsets, midnight crossings, mixed activities, and UTC overlaps.
+Durations are sums of recorded durations, not union time when records overlap.
+
+Windows include the anchor and preceding N-1 dates. Calendar coverage remains
+unknown; empty dates are never manufactured as rest days and the final day may
+be partial. Numeric summaries include available-value denominators. All-missing
+measurements remain null; genuine zeros stay zero. Strain mean/median/max describe
+record scores. The structured result also exposes `arithmetic_session_strain_sum`,
+which is explicitly not Day Strain or an additive physiological load.
+Zone percentages use only records containing all six zones, divided by their
+summed zone time; zone totals separately retain each metric's available values.
+Average HR is duration-weighted and approximate. Cardiovascular metrics do not
+quantify muscular workload. Energy retains kJ and derives kcal by dividing by 4.184.
+
+Pairing aggregates the entire workout day D before looking for report date D+1.
+Missing D+1 remains missing: D+2 is never substituted. Multiple cycle/sleep outcomes
+are retained as ambiguous candidates, not independent observations. Each outcome
+retains cycle/sleep provenance, missing metrics, offset and chronology flags, and
+an in-progress-cycle flag. Pending/unscorable or absent recovery values are not
+used as scored outcomes. A scored morning recovery can coexist with an unfinished
+cycle; current cycle strain is not used in this pairing. No outcome is attributed
+to a sport on a mixed-activity day. All relationships are descriptive, not causal.
+
 ## Analyze personal baselines
 
 Run `python whoop_analysis.py` to print an offline report using
