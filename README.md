@@ -116,8 +116,9 @@ recovery. Days with only naps or an ongoing multi-day cycle may have no daily ro
 Entity files are cumulative archives: repeat fetches upsert by ID, including
 blanked measurements and changed recovery/sleep relationships. Records not returned
 remain archived; this is not a deletion-synchronization service. The daily report
-is rebuilt from the **current collection** for the requested window, so absent
-recoveries are not filled from an older archive. Changing the window replaces
+is rebuilt from **current collection identities**, resolved against archived update
+times, for the requested window. The archive and daily snapshot use the same
+selected versions. Absent recoveries are not filled from an older archive. Changing the window replaces
 that derived report; it does not erase the entity archive. Identical input gives
 identical files and no duplicate entity or relationship rows.
 
@@ -131,6 +132,68 @@ The old date-keyed history cannot recover discarded identities. Keep it for
 comparison and rebuild corrected data from the API; do not relabel its rows as a
 migration. The latest-cycle display command remains a cycle-start-labelled view,
 separate from the historical report.
+
+## Extended sleep data layer (Phase 5A)
+
+Sleep entities now preserve nullable stage durations, sleep-need components,
+efficiency, consistency, respiratory rate, sleep-cycle count and disturbance count.
+Source `*_milli` durations become integer `*_ms` fields; percentages remain on
+their original percentage scale and respiratory rate is in breaths per minute.
+The original `sleep_performance` mapping and daily metrics schema are unchanged.
+Naps retain their own IDs and details and remain excluded from primary mornings.
+
+`read_entities(..., "sleeps")` accepts exactly two ordered headers: the original
+ten-column header and the extended header. Legacy rows gain null detail fields
+in memory without a write. Unknown, partial, reordered or malformed schemas are
+rejected. Missing measurements remain null; genuine zeros remain zero. New
+durations/counts must be integers, measurements must be finite, and only the
+recent-nap need contribution may be negative. Non-scored responses have no
+extended measurements; extended CSVs with stale non-scored measurements fail
+validation. Existing Sleep Performance validation behavior is retained.
+
+On an explicitly requested future collection, persistence writes the extended
+header, retaining unfetched legacy rows with blank details and upserting fetched
+rows by sleep ID. Known update times beat missing times, and newer times beat older
+times during both collection deduplication and persistence. Collection groups all
+normalized candidates by ID before resolving them, including paginated and related
+responses. Only the highest-precedence timestamp group participates in resolution.
+A real candidate must contain every supplied value from that group (zero counts
+as supplied); conflicts or the absence of a covering candidate fail deterministically.
+Partial responses are never merged into a manufactured entity. Equal-time
+archive refreshes still accept the incoming version. A newer response replaces measurements, including nulls, rather
+than borrowing stale details. Creation/update timestamps remain source values.
+Reading this version does not backfill history or authenticate; historical
+details require a separately authorized future fetch. No personal data was
+migrated as part of Phase 5A. Daily rows are derived from resolved incoming IDs only;
+unrelated archive records stay excluded. An inconsistent resolved sleep/recovery
+relationship fails before any files are staged. Per-file atomic replacement is
+unchanged; the four CSVs remain separate files, not a multi-file transaction.
+
+`whoop_sleep.py` contains pure helpers for actual sleep (light + SWS + REM),
+restorative sleep (SWS + REM), and total sleep need (all four signed components).
+Each sum requires every operand. The accounting residual subtracts awake, light,
+SWS, REM and no-data time from in-bed time without correcting any source value.
+Efficiency diagnostics expose candidate percentages using in-bed time and
+in-bed minus no-data time, plus official-minus-derived differences in percentage
+points. Missing operands or nonpositive denominators yield null. Official WHOOP
+efficiency remains authoritative; these ratios do not claim to reproduce its
+algorithm. Recorded end-minus-start is not substituted for scored in-bed time.
+
+A later read-only `SleepDetails` representation should have these sections:
+
+| Section | Contents |
+| --- | --- |
+| `identity` | Sleep/cycle IDs, nap flag, sleep-end report date |
+| `source` | Original timing and offset, six durations, four need components, official performance/efficiency/consistency, respiratory rate and counts |
+| `derived` | Local timing, recorded interval, actual/restorative sleep and total need; any later stage percentages with explicit denominators |
+| `quality` | Score state, missing component names, accounting residual, efficiency diagnostics, provenance and schema/backfill status |
+
+Keep source and derived values distinct. Record `legacy_schema` only when the
+input header establishes it. After legacy rows are written under the extended
+header, all-null details alone cannot distinguish never-backfilled rows from
+source-missing details; backfill status must remain unknown unless explicit
+provenance is added later. No Sleep Details page, stage percentages, new readiness
+rules or Daily Report presentation changes are included in this phase.
 
 ## Collect workout / activity history
 

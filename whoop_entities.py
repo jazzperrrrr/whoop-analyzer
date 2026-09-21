@@ -10,13 +10,16 @@ import tempfile
 
 from whoop_auth import PROJECT_DIR
 from whoop_fetch import APIError, metric
+from whoop_sleep import (EXTENDED_FIELDS, INTEGER_FIELDS, STAGE_FIELDS, NEED_FIELDS,
+                         SCORE_FIELDS, measurement, normalize_sleep_measurements)
 
 DATA_DIR = PROJECT_DIR / "data"
 TIME_FIELDS = ("start", "end", "timezone_offset", "created_at", "updated_at")
 RECOVERY_METRICS = ("recovery_score", "hrv_ms", "resting_heart_rate_bpm")
+LEGACY_SLEEP_SCHEMA = ("sleep_id", "cycle_id", *TIME_FIELDS, "nap", "score_state", "sleep_performance")
 SCHEMAS = {
     "cycles": ("cycle_id", *TIME_FIELDS, "score_state", "day_strain"),
-    "sleeps": ("sleep_id", "cycle_id", *TIME_FIELDS, "nap", "score_state", "sleep_performance"),
+    "sleeps": (*LEGACY_SLEEP_SCHEMA, *EXTENDED_FIELDS),
     "recoveries": ("cycle_id", "sleep_id", "created_at", "updated_at", "score_state", *RECOVERY_METRICS),
     "daily_metrics": ("report_date", "cycle_id", "sleep_id", *RECOVERY_METRICS,
                       "day_strain", "sleep_performance", "sleep_start", "sleep_end",
@@ -85,6 +88,11 @@ def normalize(kind, record):
         row["nap"] = "true" if record["nap"] else "false"
     for source, field in METRICS[kind].items():
         row[field] = metric(record, source)
+    if kind == "sleeps":
+        try:
+            row.update(normalize_sleep_measurements(record))
+        except (ValueError, OverflowError):
+            raise APIError("Invalid WHOOP sleep measurements; no data saved.") from None
     return row
 
 
@@ -92,14 +100,55 @@ def entity_key(kind, row):
     return tuple(row[field] for field in KEYS[kind])
 
 
-def insert(entities, kind, record):
+def effective_version(previous, candidate):
+    """Resolve a completed batch's chosen version against the stored archive.
+
+    Known update times beat unknown times. Equal-time archive refreshes retain
+    incoming-update semantics. Same-batch resolution is handled separately.
+    """
+    if previous is None:
+        return candidate
+    old_time, new_time = previous.get("updated_at"), candidate.get("updated_at")
+    if old_time and not new_time:
+        return previous
+    if new_time and not old_time:
+        return candidate
+    if old_time and new_time:
+        old_time, new_time = timestamp(old_time), timestamp(new_time)
+        if old_time != new_time:
+            return previous if old_time > new_time else candidate
+    return candidate
+
+
+def highest_precedence_candidates(candidates):
+    """Keep only the newest known update group, or all candidates if undated."""
+    dated = [(timestamp(row["updated_at"]), row) for row in candidates if row.get("updated_at")]
+    if not dated:
+        return list(candidates)
+    latest = max(updated for updated, _ in dated)
+    return [row for updated, row in dated if updated == latest]
+
+
+def resolve_entity_candidates(candidates):
+    """Select one actual normalized response from a complete same-ID batch.
+
+    A winning-timestamp candidate must cover every supplied value in its group.
+    Missing means None, never zero. Disjoint partial records are not merged, and
+    conflicts fail identically regardless of pagination or candidate order.
+    """
+    winners = highest_precedence_candidates(candidates)
+    for candidate in winners:
+        if all(value is None or candidate.get(key) == value
+               for other in winners for key, value in other.items()):
+            return candidate
+    raise APIError("Conflicting WHOOP entity versions without a covering source record; no data saved.")
+
+
+def insert(candidates, kind, record):
+    """Accumulate normalized responses by ID; do not resolve streaming prefixes."""
     row = normalize(kind, record)
     key = entity_key(kind, row)
-    previous = entities[kind].get(key)
-    if previous and previous.get("updated_at") and row.get("updated_at"):
-        if timestamp(previous["updated_at"]) > timestamp(row["updated_at"]):
-            return  # Overlapping pages: retain the newer version of this ID.
-    entities[kind][key] = row
+    candidates[kind].setdefault(key, []).append(row)
 
 
 def fetch_pages(client, path, params):
@@ -164,10 +213,10 @@ def collect_history(client, today=None, days=30):
     params = {"limit": 25,
               "start": datetime.combine(first - timedelta(days=1), time.min, timezone.utc).isoformat(),
               "end": datetime.combine(last + timedelta(days=2), time.min, timezone.utc).isoformat()}
-    entities = {kind: {} for kind in ("cycles", "sleeps", "recoveries")}
+    candidates = {kind: {} for kind in ("cycles", "sleeps", "recoveries")}
     for kind, path in (("cycles", "/cycle"), ("sleeps", "/activity/sleep"), ("recoveries", "/recovery")):
         for record in fetch_pages(client, path, params):
-            insert(entities, kind, record)
+            insert(candidates, kind, record)
 
     def related(kind, path, expected):
         record = client.get(path, optional=True)
@@ -175,43 +224,61 @@ def collect_history(client, today=None, days=30):
             row = normalize(kind, record)
             if any(row.get(k) != v for k, v in expected.items()):
                 raise APIError("Inconsistent WHOOP entity ID; no data saved.")
-            insert(entities, kind, record)
+            insert(candidates, kind, record)
+
+    def references(kind, fields):
+        # Relationship lookups need IDs, not a prematurely selected measurement
+        # record. Ignore superseded timestamps and retain all winning references.
+        return sorted({tuple(row[field] for field in fields)
+                       for group in candidates[kind].values()
+                       for row in highest_precedence_candidates(group)})
 
     # Endpoint time semantics differ. Complete relationships by ID, even when
     # the related record begins before the padded collection bounds.
-    cids = {r["cycle_id"] for kind in ("sleeps", "recoveries") for r in entities[kind].values()}
-    for cid in sorted(cids):
-        if (cid,) not in entities["cycles"]:
+    cids = set(references("sleeps", ("cycle_id",))) | set(references("recoveries", ("cycle_id",)))
+    for (cid,) in sorted(cids):
+        if (cid,) not in candidates["cycles"]:
             related("cycles", f"/cycle/{cid}", {"cycle_id": cid})
-    for (cid,) in list(entities["cycles"]):
-        if (cid,) not in entities["recoveries"]:
+    for (cid,) in sorted(candidates["cycles"]):
+        if (cid,) not in candidates["recoveries"]:
             related("recoveries", f"/cycle/{cid}/recovery", {"cycle_id": cid})
-    for recovery in list(entities["recoveries"].values()):
-        sid = recovery["sleep_id"]
-        if (sid,) not in entities["sleeps"]:
+    for cid, sid in references("recoveries", ("cycle_id", "sleep_id")):
+        if (sid,) not in candidates["sleeps"]:
             related("sleeps", f"/activity/sleep/{sid}",
-                    {"sleep_id": sid, "cycle_id": recovery["cycle_id"]})
-    primary_cids = {s["cycle_id"] for s in entities["sleeps"].values() if s["nap"] == "false"}
-    for (cid,) in entities["cycles"]:
+                    {"sleep_id": sid, "cycle_id": cid})
+    primary_cids = {cid for cid, nap in references("sleeps", ("cycle_id", "nap")) if nap == "false"}
+    for (cid,) in sorted(candidates["cycles"]):
         if cid not in primary_cids:
             related("sleeps", f"/cycle/{cid}/sleep", {"cycle_id": cid, "nap": "false"})
+    # All pages and related responses have arrived before any final selection.
+    entities = {kind: {key: resolve_entity_candidates(groups[key]) for key in sorted(groups)}
+                for kind, groups in candidates.items()}
     return {"first": first, "last": last, "entities": entities,
             "daily_metrics": derive_daily(entities, first, last)}
 
 
 def read_entities(path, kind):
+    """Read exact current schemas or the explicit ten-column legacy sleep schema.
+
+    Legacy sleep details expand to None in memory only. New measurements are
+    typed; existing columns retain their historical read behavior.
+    """
     if not path.exists():
         return {}
     try:
         with path.open(newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file, strict=True)
-            if reader.fieldnames != list(SCHEMAS[kind]):
+            header = reader.fieldnames
+            accepted = [list(SCHEMAS[kind])]
+            if kind == "sleeps":
+                accepted.append(list(LEGACY_SLEEP_SCHEMA))
+            if header not in accepted:
                 raise ValueError
             rows = {}
             for raw in reader:
-                if set(raw) != set(SCHEMAS[kind]) or any(v is None for v in raw.values()):
+                if set(raw) != set(header) or any(v is None for v in raw.values()):
                     raise ValueError
-                row = {k: v if v != "" else None for k, v in raw.items()}
+                row = {k: raw.get(k) if raw.get(k) != "" else None for k in SCHEMAS[kind]}
                 key = entity_key(kind, row)
                 if not all(key) or key in rows:
                     raise ValueError
@@ -230,10 +297,27 @@ def read_entities(path, kind):
                         if not math.isfinite(value):
                             raise ValueError
                         record["score"][source] = value
+                if kind == "sleeps":
+                    for group, fields in (("stage_summary", STAGE_FIELDS), ("sleep_needed", NEED_FIELDS), (None, SCORE_FIELDS)):
+                        target = record["score"] if group is None else record["score"].setdefault(group, {})
+                        for source, field in fields.items():
+                            value = row[field]
+                            if value is not None:
+                                if field in INTEGER_FIELDS:
+                                    if not re.fullmatch(r"-?[0-9]+", value):
+                                        raise ValueError
+                                    value = int(value)
+                                else:
+                                    value = float(value)
+                                value = measurement(field, value)
+                                if row["score_state"] != "SCORED":
+                                    raise ValueError
+                            row[field] = value
+                            target[source] = value
                 normalize(kind, record)
                 rows[key] = row
             return rows
-    except (ValueError, TypeError, csv.Error, UnicodeError, APIError):
+    except (ValueError, TypeError, OverflowError, csv.Error, UnicodeError, APIError):
         raise APIError("Existing entity CSV is invalid; no data saved.") from None
 
 
@@ -249,13 +333,18 @@ def save_history(collection, directory=DATA_DIR):
     paths = {kind: directory / (kind + ".csv") for kind in SCHEMAS}
     if any(path.is_symlink() for path in paths.values()):
         raise APIError("Entity CSVs must not be symbolic links.")
-    tables = {}
+    tables, effective_batch = {}, {}
     for kind in ("cycles", "sleeps", "recoveries"):
         rows = read_entities(paths[kind], kind)
-        rows.update(collection["entities"][kind])
+        effective_batch[kind] = {}
+        for key, row in collection["entities"][kind].items():
+            selected = effective_version(rows.get(key), row)
+            rows[key] = selected
+            effective_batch[kind][key] = selected
         tables[kind] = sorted(rows.values(), key=lambda r: entity_key(kind, r))
-    # Derive from this collection, not potentially stale archived measurements.
-    tables["daily_metrics"] = derive_daily(collection["entities"], collection["first"], collection["last"])
+    # Only incoming identities participate, using the same versions as the archive.
+    # Relationship validation completes before staging or replacing any files.
+    tables["daily_metrics"] = derive_daily(effective_batch, collection["first"], collection["last"])
     directory.mkdir(parents=True, exist_ok=True)
     staged = []
     try:
