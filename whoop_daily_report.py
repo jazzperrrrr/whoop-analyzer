@@ -482,21 +482,27 @@ def format_daily_report(report):
     return "\n".join(lines)
 
 
+def load_daily_report(data_dir=DATA_DIR):
+    """Read local inputs for CLI and dashboard without changing source data."""
+    root = Path(data_dir)
+    entities = {kind: read_entities(root / (kind + ".csv"), kind) for kind in ("sleeps", "recoveries", "cycles")}
+    physiology = analysis.load_daily_metrics(root / "daily_metrics.csv")
+    classified = classify_workouts(read_workouts(root / "workouts.csv").values(),
+                                   load_classifications(root / "workout_classifications.csv"))
+    report = build_daily_report(**entities, physiology=physiology, workouts=classified)
+    if not (root / "workout_classifications.csv").exists():
+        report.data_quality.append(dict(code="missing_classification_sidecar", value=True, detail="Original labels only."))
+    if not (root / "workouts.csv").exists():
+        report.data_quality.append(dict(code="missing_workout_dataset", value=True, detail="No workout archive available."))
+    return report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR, help="Normalized local datasets (read only)")
     args = parser.parse_args(argv)
     try:
-        root = args.data_dir
-        entities = {kind: read_entities(root / (kind + ".csv"), kind) for kind in ("sleeps", "recoveries", "cycles")}
-        physiology = analysis.load_daily_metrics(root / "daily_metrics.csv")
-        classified = classify_workouts(read_workouts(root / "workouts.csv").values(),
-                                       load_classifications(root / "workout_classifications.csv"))
-        report = build_daily_report(**entities, physiology=physiology, workouts=classified)
-        if not (root / "workout_classifications.csv").exists():
-            report.data_quality.append(dict(code="missing_classification_sidecar", value=True, detail="Original labels only."))
-        if not (root / "workouts.csv").exists():
-            report.data_quality.append(dict(code="missing_workout_dataset", value=True, detail="No workout archive available."))
+        report = load_daily_report(args.data_dir)
         print(format_daily_report(report))
     except (APIError, analysis.AnalysisError, OSError, ValueError):
         print("Daily report unavailable: invalid or unreadable local inputs; no files changed.")

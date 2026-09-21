@@ -375,3 +375,29 @@ Additional metadata columns from the history model are accepted.
 
 After installing the dependencies, run `python -m unittest discover -s tests -v`.
 The checks use simulated WHOOP responses and never use your real credentials.
+
+## Local web dashboard
+
+Double-click `start_dashboard.cmd`, or run from the repository:
+
+```powershell
+.\.venv\Scripts\python.exe -B whoop_dashboard.py
+```
+
+Open http://127.0.0.1:8501. The server binds only to this computer's loopback
+interface; Ctrl+C stops it. Use `--port 8502` if the port is already occupied.
+The launcher uses the repository's own virtual environment and passes through
+command-line arguments.
+
+The dashboard reads this repository's `data/` by default, independently of the
+terminal's current directory. `--data-dir <directory>` can select another local
+snapshot. Personal CSVs remain Git-ignored and are never copied or rewritten by
+the dashboard. Refresh local data only rereads local files: it does not call WHOOP,
+refresh tokens, or synchronize data. No personal reports are saved.
+
+CLI and dashboard share `load_daily_report()` and the existing selection,
+consistency, baseline and readiness logic. The page shows morning metrics,
+physiological state, the recorded sleep interval, recent training, and expandable
+data-quality details. It uses local CSS with no remote assets or analytics.
+Run the synthetic dashboard tests with
+`python -B -m unittest discover -s tests -p "test_whoop_dashboard.py" -v`.
