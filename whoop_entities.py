@@ -210,6 +210,13 @@ def collect_history(client, today=None, days=30):
     if type(days) is not int or days < 30:
         raise APIError("History requires at least 30 days.")
     first = last - timedelta(days=days - 1)
+    return collect_window(client, first, last)
+
+
+def collect_window(client, first, last):
+    """Collect an explicit reporting window, retaining existing padding/ID lookups."""
+    if not isinstance(first, date) or not isinstance(last, date) or first > last:
+        raise APIError("Invalid collection window; no data saved.")
     params = {"limit": 25,
               "start": datetime.combine(first - timedelta(days=1), time.min, timezone.utc).isoformat(),
               "end": datetime.combine(last + timedelta(days=2), time.min, timezone.utc).isoformat()}

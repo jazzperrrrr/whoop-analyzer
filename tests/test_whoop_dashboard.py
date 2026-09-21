@@ -6,10 +6,12 @@ from datetime import timedelta
 from http.client import HTTPConnection
 import io
 import os
+import re
 from pathlib import Path
 import socket
 import tempfile
 import threading
+from urllib.parse import urlencode
 import unittest
 from unittest.mock import patch
 
@@ -22,6 +24,7 @@ from whoop_activity import classify_workouts
 from test_whoop_daily_report import D, entities, history, report
 from test_whoop_workout_analysis import record
 from test_whoop_sleep import EXPECTED
+from whoop_sleep_product import compose_sleep_product
 
 
 def write_inputs(root, extended=False):
@@ -63,6 +66,24 @@ class OfflineDashboardTestCase(unittest.TestCase):
 
 
 class DashboardTests(OfflineDashboardTestCase):
+    def test_home_sleep_fields_details_origins_and_freshness(self):
+        source = entities()
+        source['sleeps'][0].update(EXPECTED)
+        r = report(source)
+        r.sleep_product = compose_sleep_product(r, source['sleeps'], today=D+timedelta(days=2))
+        home = web.render_report(r)
+        for label in ('Actual Sleep', 'Sleep Need', 'Sleep Performance', 'Sleep Efficiency', 'Sleep Details'):
+            self.assertIn(label, home)
+        self.assertIn('Local data may be out of date', home)
+        details = web.render_sleep_details(r)
+        for label in ('Last Sleep', 'Sleep Stages', 'Sleep Need Breakdown', 'Quality', 'Trends',
+                      'Nap adjustment', '% of actual sleep', '% of time in bed', '(whoop)', '(derived)'):
+            self.assertIn(label, details)
+        self.assertIn('-0h 00m', details)
+        for value in (r.provenance['sleep_id'], r.provenance['cycle_id']):
+            self.assertNotIn(value, details)
+        self.assertNotIn(str(Path.cwd()), details)
+
     def test_populated_extended_archive_renders_without_mutation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -207,10 +228,10 @@ class LocalHTTPTests(OfflineDashboardTestCase):
         self.server.server_close()
         self.thread.join(timeout=3)
 
-    def request(self, path='/', method='GET', headers=None):
+    def request(self, path='/', method='GET', headers=None, body=None):
         conn = HTTPConnection('127.0.0.1', self.server.server_port, timeout=3)
         try:
-            conn.request(method, path, headers=headers or {})
+            conn.request(method, path, body=body, headers=headers or {})
             response = conn.getresponse()
             return response.status, dict(response.getheaders()), response.read().decode('utf-8')
         finally:
@@ -225,7 +246,7 @@ class LocalHTTPTests(OfflineDashboardTestCase):
         self.assertEqual(headers['Cache-Control'], 'no-store')
         self.assertIn("default-src 'none'", headers['Content-Security-Policy'])
         self.assertEqual(headers['X-Content-Type-Options'], 'nosniff')
-        self.assertEqual(headers['Referrer-Policy'], 'no-referrer')
+        self.assertEqual(headers['Referrer-Policy'], 'same-origin')
         self.assertNotIn('Access-Control-Allow-Origin', headers)
         self.assertEqual(self.request('/dashboard.css')[0], 200)
         for path in ('/data/sleeps.csv', '/.env', '/whoop_tokens.json', '/../README.md', '/%2e%2e/README.md', '/?data-dir=other'):
@@ -243,6 +264,65 @@ class LocalHTTPTests(OfflineDashboardTestCase):
         self.assertNotIn('private-invalid-data', body)
         write_inputs(self.root)
         self.assertEqual(self.request()[0], 200)
+
+    def test_get_and_refresh_are_offline_sleep_details_available(self):
+        with patch.object(web, 'sync_recent', side_effect=AssertionError('GET must not sync')):
+            self.assertEqual(self.request()[0], 200)
+            self.assertEqual(self.request()[0], 200)
+            self.assertEqual(self.request('/sleep')[0], 200)
+            self.assertEqual(self.request('/sync')[0], 404)
+
+    def test_sync_requires_post_origin_host_and_csrf(self):
+        _, _, body = self.request()
+        token = re.search(r'name="csrf" value="([^"]+)"', body).group(1)
+        origin = f'http://127.0.0.1:{self.server.server_port}'
+        headers = {'Origin': origin, 'Content-Type': 'application/x-www-form-urlencoded'}
+        form = urlencode({'csrf': token})
+        with patch.object(web, 'sync_recent', return_value={'success': True}) as sync:
+            for changed in ({'Origin':'null'}, {'Origin':'http://evil.example'}, {'Host':'evil.example'}, {'Sec-Fetch-Site':'cross-site'}):
+                self.assertEqual(self.request('/sync', 'POST', dict(headers, **changed), form)[0], 403)
+            self.assertEqual(self.request('/sync','POST',headers,urlencode({'csrf':'wrong'}))[0],403)
+            self.assertEqual(self.request('/sync','POST',headers,urlencode({'csrf':'invalid-\u00e9'}))[0],403)
+            self.assertEqual(self.request('/sync','POST',headers,'other=value')[0],403)
+            self.assertEqual(self.request('/sync','POST',{'Content-Type':headers['Content-Type']},form)[0],403)
+            self.assertEqual(self.request('/sync','POST',headers,form+'&csrf='+token)[0],403)
+            self.assertEqual(self.request('/sync','PUT',headers,form)[0],405)
+            sync.assert_not_called()
+            status, response_headers, body = self.request('/sync','POST',headers,form)
+            self.assertEqual(status,303)
+            status, _, body = self.request(response_headers['Location'])
+            self.assertIn('WHOOP sync complete',body)
+            sync.assert_called_once_with(self.root)
+
+    def test_sync_failure_never_exposes_exception_or_payload(self):
+        _, _, body = self.request()
+        token = re.search(r'name="csrf" value="([^"]+)"', body).group(1)
+        headers = {'Origin':f'http://127.0.0.1:{self.server.server_port}', 'Content-Type':'application/x-www-form-urlencoded'}
+        with patch.object(web,'sync_recent',side_effect=RuntimeError('synthetic-secret-token')):
+            status, response_headers, html = self.request('/sync','POST',headers,urlencode({'csrf':token}))
+            self.assertEqual(status,303)
+            status, _, html = self.request(response_headers['Location'])
+        self.assertEqual(status,200)
+        self.assertNotIn('synthetic-secret-token',html)
+        self.assertIn('No automatic retry',html)
+
+    def test_browser_form_redirect_refresh_and_replay(self):
+        _, page_headers, page = self.request()
+        self.assertEqual(page_headers['Referrer-Policy'], 'same-origin')
+        token = re.search(r'name="csrf" value="([^"]+)"', page).group(1)
+        origin = f'http://127.0.0.1:{self.server.server_port}'
+        headers = {'Origin': origin, 'Referer': origin+'/', 'Sec-Fetch-Site': 'same-origin',
+                   'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document',
+                   'Content-Type': 'application/x-www-form-urlencoded'}
+        form = urlencode({'csrf': token})
+        with patch.object(web, 'sync_recent', return_value={'success':True}) as sync:
+            status, response_headers, _ = self.request('/sync','POST',headers,form)
+            self.assertEqual(status,303)
+            destination = response_headers['Location']
+            self.assertEqual(self.request(destination)[0],200)
+            self.assertEqual(self.request(destination)[0],200)  # Browser refresh is GET.
+            self.assertEqual(self.request('/sync','POST',headers,form)[0],403)
+            sync.assert_called_once_with(self.root)
 
 
 if __name__ == '__main__':

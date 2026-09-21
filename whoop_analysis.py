@@ -156,6 +156,14 @@ def daily_observations(rows):
                   for metric, values in metrics.items()} for day, metrics in grouped.items()}
 
 
+def prior_window_stats(observations, day, window):
+    """Descriptive mean of observed calendar dates in [D-window, D)."""
+    values = [observations[d] for d in sorted(observations)
+              if 0 < (day - d).days <= window and observations[d] is not None]
+    return {"average": math.fsum(v / len(values) for v in values) if values else None,
+            "days_available": len(values), "window_days": window}
+
+
 def rolling_baselines(rows):
     """Return all dates' means/counts for [report_date - N days, report_date)."""
     observations = daily_observations(rows)
@@ -165,12 +173,8 @@ def rolling_baselines(rows):
         for metric in METRICS:
             result[day][metric] = {}
             for window in WINDOWS:
-                values = [observations[d][metric] for d in sorted(observations)
-                          if 0 < (day - d).days <= window and observations[d][metric] is not None]
-                result[day][metric][window] = {
-                    "average": math.fsum(v / len(values) for v in values) if values else None,
-                    "days_available": len(values), "window_days": window,
-                }
+                result[day][metric][window] = prior_window_stats(
+                    {d: values[metric] for d, values in observations.items()}, day, window)
     return result
 
 

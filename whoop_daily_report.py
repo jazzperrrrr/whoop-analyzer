@@ -34,6 +34,8 @@ class DailyReport:
     context: dict = field(default_factory=dict)
     data_quality: list = field(default_factory=list)
     provenance: dict = field(default_factory=dict)
+    sleep_product: object | None = None
+    baseline_observations: list = field(default_factory=list)
 
 
 def _rows(table):
@@ -387,7 +389,7 @@ def build_daily_report(sleeps, recoveries, cycles, physiology, workouts):
     return DailyReport(report_date=selection["report_date"], selection=selection, physiology=current,
                        baseline={m: e["baselines"] for m, e in entries.items()}, interpretation=interpretation,
                        sleep=sleep_context, yesterday_training=yesterday, recent_training=recent,
-                       context=context, data_quality=quality,
+                       context=context, data_quality=quality, baseline_observations=baseline_rows,
                        provenance=dict(duplicate_daily_dates=duplicates, snapshot_consistency=consistency,
                                        baseline_identity_exclusions=identity_exclusions,
                                        sleep_id=(selection["sleep"] or {}).get("sleep_id"), cycle_id=cycle.get("cycle_id"),
@@ -494,6 +496,8 @@ def load_daily_report(data_dir=DATA_DIR):
         report.data_quality.append(dict(code="missing_classification_sidecar", value=True, detail="Original labels only."))
     if not (root / "workouts.csv").exists():
         report.data_quality.append(dict(code="missing_workout_dataset", value=True, detail="No workout archive available."))
+    from whoop_sleep_product import compose_sleep_product
+    report.sleep_product = compose_sleep_product(report, entities["sleeps"])
     return report
 
 

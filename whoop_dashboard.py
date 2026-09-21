@@ -1,14 +1,19 @@
-"""Offline, read-only WHOOP dashboard. Bind only to this computer's loopback."""
+"""Local WHOOP views with a separate, explicit manual sync action."""
 
 import argparse
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import secrets
+import threading
+from urllib.parse import parse_qs
 
 import whoop_analysis as analysis
 from whoop_daily_report import load_daily_report
 from whoop_entities import DATA_DIR
 from whoop_fetch import APIError
+from whoop_sleep_product import compose_sleep_product
+from whoop_sync import local_read, sync_recent, SyncError
 
 
 INPUTS = ('sleeps.csv', 'recoveries.csv', 'cycles.csv', 'daily_metrics.csv',
@@ -35,11 +40,12 @@ def fingerprint(root):
 
 def load_snapshot(root):
     root = Path(root)
-    before = fingerprint(root)
-    report = load_daily_report(root)
-    if fingerprint(root) != before:
-        raise SnapshotChanged
-    return report
+    with local_read(root):
+        before = fingerprint(root)
+        report = load_daily_report(root)
+        if fingerprint(root) != before:
+            raise SnapshotChanged
+        return report
 
 
 def e(value):
@@ -66,9 +72,9 @@ def shell(content):
             '<link rel="stylesheet" href="/dashboard.css"></head><body>'
             '<a class="skip" href="#main">Skip to report</a><div class="page">'
             '<header><a class="brand" href="/">WHOOP <span>ANALYZER</span></a>'
-            '<span class="local">LOCAL / READ ONLY</span></header>'
+            '<span class="local">LOCAL / MANUAL SYNC</span></header>'
             '<main id="main">' + content + '</main>'
-            '<footer>From your local WHOOP snapshot. No live sync. '
+            '<footer>From your local WHOOP snapshot. No automatic sync. '
             'Descriptive signals relative to your baseline.</footer></div></body></html>')
 
 
@@ -166,12 +172,114 @@ def details(report):
     return out + '</ul></div></details>'
 
 
-def render_report(report):
+def sleep_product(report):
+    return report.sleep_product or compose_sleep_product(report, [report.selection['sleep']] if report.selection['sleep'] else [])
+
+
+def sleep_value(product, name):
+    metric = product.metrics[name]
+    if metric.value is None:
+        return 'Unavailable'
+    if metric.unit == 'ms':
+        sign = '-' if metric.value < 0 else '+' if name == 'actual_minus_need_ms' and metric.value > 0 else ''
+        return sign + interval(abs(metric.value) / 60000)
+    if metric.unit == 'count':
+        return str(int(metric.value))
+    return number(metric.value) + ('%' if metric.unit == 'percent' else ' breaths/min')
+
+
+def sleep_facts(product, fields):
+    out = '<dl class="facts">'
+    for name, label in fields:
+        metric = product.metrics[name]
+        out += f'<div><dt>{e(label)} <small>({e(metric.origin)})</small></dt><dd>{e(sleep_value(product, name))}</dd></div>'
+    return out + '</dl>'
+
+
+def controls(csrf_token):
+    out = '<nav class="actions"><a class="button" href="/">Refresh local data</a><a class="button" href="/sleep">Sleep Details</a>'
+    if csrf_token:
+        out += ('<form method="post" action="/sync">'
+                f'<input type="hidden" name="csrf" value="{e(csrf_token)}">'
+                '<button class="button" type="submit">Sync WHOOP</button></form>')
+    return out + '</nav><p class="muted">Refresh rereads files. Sync WHOOP fetches recent records and updates local data.</p>'
+
+
+def freshness_notice(product):
+    age = product.freshness['days_since_latest_available_morning']
+    if age is None:
+        return '<p class="muted">No available morning. Collection time is unknown.</p>'
+    out = f'<p class="muted">{age} calendar days since latest available morning; collection time is unknown.</p>'
+    if product.freshness['may_be_out_of_date']:
+        out += warning('Local data may be out of date.')
+    return out
+
+
+def render_sleep_details(report, csrf_token=None):
+    product = sleep_product(report)
+    out = f'<h1>Sleep Details</h1><p>Latest available morning: {e(product.report_date or "Unavailable")}</p>'
+    out += freshness_notice(product) + controls(csrf_token)
+    out += '<section class="panel"><h2>Last Sleep</h2>'
+    if product.timing:
+        t = product.timing
+        out += f'<p>{t["local_start"]:%Y-%m-%d %H:%M} → {t["local_end"]:%Y-%m-%d %H:%M} ({e(t["recorded_offset"])})</p>'
+        out += f'<p>Recorded interval: {interval(t["recorded_interval_ms"] / 60000)}</p>'
+    else:
+        out += warning('Primary sleep is unavailable or ambiguous; no single-night values substituted.')
+    out += sleep_facts(product, [('actual_sleep_ms', 'Actual Sleep'), ('in_bed_ms', 'WHOOP time in bed'), ('total_need_ms', 'Sleep Need')]) + '</section>'
+    out += '<section class="panel"><h2>Sleep Stages</h2><p class="muted">Aggregate totals, not a stage timeline. Restorative overlaps Deep and REM.</p>'
+    out += sleep_facts(product, [('awake_ms', 'Awake'), ('light_ms', 'Light'), ('deep_ms', 'Deep'), ('rem_ms', 'REM'),
+                                ('restorative_sleep_ms', 'Restorative'), ('no_data_ms', 'No-data time'),
+                                ('light_pct_actual_sleep', 'Light % of actual sleep'), ('deep_pct_actual_sleep', 'Deep % of actual sleep'),
+                                ('rem_pct_actual_sleep', 'REM % of actual sleep'), ('restorative_pct_actual_sleep', 'Restorative % of actual sleep'),
+                                ('awake_pct_in_bed', 'Awake % of time in bed')]) + '</section>'
+    out += '<section class="panel"><h2>Sleep Need Breakdown</h2><p class="muted">Signed sum of WHOOP-provided components; not a reconstruction of its Sleep Debt algorithm.</p>'
+    out += sleep_facts(product, [('baseline_need_ms', 'Baseline need'), ('sleep_debt_need_ms', 'Sleep debt'),
+                                ('recent_strain_need_ms', 'Recent strain'), ('nap_adjustment_ms', 'Nap adjustment'),
+                                ('total_need_ms', 'Total Sleep Need'), ('actual_minus_need_ms', 'Sleep versus estimated need')])
+    out += '<p class="muted">Sleep versus estimated need is a single-night duration difference, not accumulated sleep debt.</p></section>'
+    out += '<section class="panel"><h2>Quality</h2>' + sleep_facts(product, [('performance_pct', 'Sleep Performance'),
+        ('efficiency_pct', 'Sleep Efficiency'), ('consistency_pct', 'Sleep Consistency'), ('respiratory_rate', 'Respiratory Rate'),
+        ('sleep_cycle_count', 'Sleep cycles'), ('disturbance_count', 'Disturbances')]) + '</section>'
+    labels = {'actual_sleep_ms': 'Actual Sleep', 'total_need_ms': 'Sleep Need', 'performance_pct': 'Sleep Performance',
+              'efficiency_pct': 'Sleep Efficiency', 'consistency_pct': 'Sleep Consistency', 'respiratory_rate': 'Respiratory Rate',
+              'deep_ms': 'Deep sleep', 'rem_ms': 'REM sleep', 'restorative_sleep_ms': 'Restorative sleep'}
+    out += '<section class="panel"><h2>Trends</h2><p class="muted">Primary sleeps only. Prior windows exclude the selected date; missing dates are not zero-filled. No predictions.</p>'
+    for name, trend in product.trends.items():
+        unit = 'minutes' if trend['unit'] == 'ms' else trend['unit']
+        divisor = 60000 if trend['unit'] == 'ms' else 1
+        def display(value):
+            return 'Unavailable' if value is None else number(value / divisor)
+        out += f'<details><summary>{e(labels[name])} ({e(unit)})</summary><table><tr><th>Prior window</th><th>Mean</th><th>Observed dates</th></tr>'
+        for window, stats in trend['windows'].items():
+            out += f'<tr><td>{window} days</td><td>{display(stats["average"])}</td><td>{stats["days_available"]}/{window}</td></tr>'
+        out += '</table><table><tr><th>Date</th><th>Daily value</th><th>Recorded offset</th></tr>'
+        for point in trend['daily']:
+            out += f'<tr><td>{e(point["report_date"])}</td><td>{display(point["value"])}</td><td>{e(point["recorded_offset"])}</td></tr>'
+        out += '</table></details>'
+    out += '</section><section class="panel"><h2>Naps</h2><p class="muted">Separate recorded naps; not added to primary sleep stages. Need adjustment comes only from WHOOP.</p>'
+    for nap in product.naps:
+        t = nap['timing']
+        value = nap['metrics']['actual_sleep_ms'].value
+        out += f'<p>{t["local_start"]:%Y-%m-%d %H:%M} → {t["local_end"]:%H:%M} ({e(t["recorded_offset"])}) · Actual nap sleep: {interval(None if value is None else value/60000)}</p>'
+    if not product.naps:
+        out += '<p>No recorded naps in this local archive.</p>'
+    out += '</section><details class="panel"><summary>Sleep Data Quality</summary>'
+    out += ''.join(f'<p>{e(flag.replace("_", " "))}</p>' for flag in product.quality)
+    out += f'<p>Score state: {e(product.provenance.get("score_state") or "Unavailable")}</p>'
+    residual = product.provenance.get('accounting_residual_ms')
+    out += f'<p>Duration accounting residual: {e(residual if residual is not None else "Unavailable")} ms</p>'
+    out += '<p>Official efficiency remains authoritative; derived ratios are diagnostic only. Source update time is not collection time.</p></details>'
+    return shell(out)
+
+
+def render_report(report, csrf_token=None):
+    product = sleep_product(report)
     date_text = str(report.report_date) if report.report_date else 'Unavailable'
     content = ('<div class="intro"><div><p class="eyebrow">YOUR MORNING, IN CONTEXT</p>'
                f'<h1>Latest available morning <span>{e(date_text)}</span></h1>'
-               '<p class="muted">Local snapshot · collection freshness unknown</p></div>'
-               '<a class="button" href="/">Refresh local data <span aria-hidden="true">↻</span></a></div>')
+               '<p class="muted">Local snapshot · collection freshness unknown</p></div></div>')
+    content += freshness_notice(product) + controls(csrf_token)
     selection = report.selection
     if selection['status'] == 'ambiguous_date':
         content += warning('Ambiguous wake-up dates. No morning date or date-dependent windows selected.')
@@ -198,16 +306,18 @@ def render_report(report):
     for metric, label in zip(METRICS, LABELS):
         content += f'<li><span>{e(label)}</span><strong>{e(state["signals"][metric]["state"])}</strong></li>'
     content += '</ul></section><section class="panel sleep"><h2>Last Sleep</h2>'
-    if report.sleep:
-        s = report.sleep
+    content += sleep_facts(product, [('actual_sleep_ms', 'Actual Sleep'), ('total_need_ms', 'Sleep Need'),
+                                    ('performance_pct', 'Sleep Performance'), ('efficiency_pct', 'Sleep Efficiency')])
+    if product.timing:
+        s = product.timing
         content += (f'<p class="sleep-time">{s["local_start"]:%H:%M} <span>→</span> {s["local_end"]:%H:%M}</p>'
                     f'<p>{s["local_start"]:%Y-%m-%d} → {s["local_end"]:%Y-%m-%d}</p>'
                     f'<p class="muted">Recorded UTC offset {e(s["recorded_offset"])}</p>'
-                    f'<div class="sleep-duration"><span>Recorded sleep interval</span><strong>{interval(s["recorded_interval_minutes"])}</strong></div>')
-        if s['ambiguous']:
-            content += warning('Ambiguous candidate interval; not a confirmed single primary sleep.')
+                    f'<div class="sleep-duration"><span>Recorded sleep interval</span><strong>{interval(s["recorded_interval_ms"] / 60000)}</strong></div>')
+    elif product.status == 'ambiguous':
+        content += warning('Ambiguous candidate interval; not a confirmed single primary sleep.')
     else:
-        content += '<p>Primary sleep unavailable.</p>'
+        content += '<p>Primary sleep unavailable or source snapshots conflict.</p>'
     content += '</section></div><section aria-labelledby="training-title"><div class="section-heading"><h2 id="training-title">Recent Training</h2><span>Relative to the report morning</span></div><div class="training-grid">'
     content += training(report.yesterday_training, 'Yesterday') + training(report.recent_training, 'Previous 3 days')
     content += '</div></section>' + details(report)
@@ -222,6 +332,8 @@ def error_page(changed=False):
 
 
 def make_handler(data_dir):
+    csrf_token = secrets.token_urlsafe(32)
+    token_lock = threading.Lock()
     class Handler(BaseHTTPRequestHandler):
         server_version = 'LocalDashboard'
         sys_version = ''
@@ -233,15 +345,17 @@ def make_handler(data_dir):
         def log_message(self, *_):
             pass
 
-        def respond(self, status, body, content_type='text/html; charset=utf-8'):
+        def respond(self, status, body, content_type='text/html; charset=utf-8', location=None):
             payload = body.encode('utf-8')
             self.send_response(status)
             self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(len(payload)))
             self.send_header('Cache-Control', 'no-store')
-            self.send_header('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+            self.send_header('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
             self.send_header('X-Content-Type-Options', 'nosniff')
-            self.send_header('Referrer-Policy', 'no-referrer')
+            self.send_header('Referrer-Policy', 'same-origin')
+            if location:
+                self.send_header('Location', location)
             self.send_header('Connection', 'close')
             self.end_headers()
             if self.command != 'HEAD':
@@ -251,22 +365,34 @@ def make_handler(data_dir):
         def send_error(self, code, message=None, explain=None):
             self.respond(code, 'Request not supported.', 'text/plain; charset=utf-8')
 
-        def do_GET(self):
+        def local_request(self):
             hosts = self.headers.get_all('Host', [])
             port = self.server.server_address[1]
-            if len(hosts) != 1 or hosts[0] not in (f'127.0.0.1:{port}', f'localhost:{port}'):
+            if self.client_address[0] != '127.0.0.1' or len(hosts) != 1 or hosts[0] not in (f'127.0.0.1:{port}', f'localhost:{port}'):
                 self.respond(403, 'Local access only.', 'text/plain; charset=utf-8')
-                return
+                return False
             if self.headers.get('Sec-Fetch-Site') == 'cross-site':
                 self.respond(403, 'Local access only.', 'text/plain; charset=utf-8')
+                return False
+            return True
+
+        def do_GET(self):
+            if not self.local_request():
                 return
             if self.path == '/dashboard.css':
                 self.respond(200, CSS.read_text(encoding='utf-8'), 'text/css; charset=utf-8')
-            elif self.path == '/':
+            elif self.path in ('/sync/success', '/sync/failure'):
+                message = ('WHOOP sync complete. Reload local data.' if self.path == '/sync/success' else
+                           'WHOOP sync failed. No automatic retry. Reload local data or retry recovery.')
+                self.respond(200, shell(warning(message) + controls(csrf_token)))
+            elif self.path in ('/', '/sleep'):
                 try:
-                    self.respond(200, render_report(load_snapshot(data_dir)))
+                    renderer = render_report if self.path == '/' else render_sleep_details
+                    self.respond(200, renderer(load_snapshot(data_dir), csrf_token))
                 except SnapshotChanged:
                     self.respond(503, error_page(changed=True))
+                except SyncError:
+                    self.respond(503, shell(warning('A sync is incomplete. Use Sync WHOOP to recover.') + controls(csrf_token)))
                 except (APIError, analysis.AnalysisError, OSError, ValueError):
                     self.respond(503, error_page())
             else:
@@ -275,9 +401,48 @@ def make_handler(data_dir):
         do_HEAD = do_GET
 
         def do_POST(self):
-            self.respond(405, 'Read-only dashboard.', 'text/plain; charset=utf-8')
+            nonlocal csrf_token
+            if not self.local_request():
+                return
+            if self.path != '/sync':
+                self.respond(405, 'Only explicit Sync WHOOP accepts POST.', 'text/plain; charset=utf-8')
+                return
+            origins = self.headers.get_all('Origin', [])
+            if origins != ['http://' + self.headers['Host']]:
+                self.respond(403, 'Same-origin sync required.', 'text/plain; charset=utf-8')
+                return
+            try:
+                lengths = self.headers.get_all('Content-Length', [])
+                if len(lengths) != 1 or self.headers.get('Transfer-Encoding'):
+                    raise ValueError
+                length = int(lengths[0])
+                if not 0 < length <= 1024 or self.headers.get_content_type() != 'application/x-www-form-urlencoded':
+                    raise ValueError
+                raw = self.rfile.read(length)
+                if len(raw) != length:
+                    raise ValueError
+                fields = parse_qs(raw.decode('utf-8'), max_num_fields=2, strict_parsing=True)
+                values = fields.get('csrf', [])
+                with token_lock:
+                    if (set(fields) != {'csrf'} or len(values) != 1 or not values[0].isascii()
+                            or not secrets.compare_digest(values[0], csrf_token)):
+                        raise ValueError
+                    # Consume before invoking sync. Replayed forms must be reloaded.
+                    csrf_token = secrets.token_urlsafe(32)
+            except (ValueError, UnicodeError, OSError):
+                self.respond(403, 'Invalid sync action.', 'text/plain; charset=utf-8')
+                return
+            try:
+                result = sync_recent(data_dir)
+                ok = result.get('success') is True
+            except Exception:
+                ok = False
+            self.respond(303, '', location='/sync/success' if ok else '/sync/failure')
 
-        do_PUT = do_DELETE = do_PATCH = do_OPTIONS = do_POST
+        def reject_write(self):
+            self.respond(405, 'Method not supported.', 'text/plain; charset=utf-8')
+
+        do_PUT = do_DELETE = do_PATCH = do_OPTIONS = reject_write
 
     return Handler
 
@@ -297,7 +462,7 @@ def main(argv=None):
         parser.error('--port must be between 1 and 65535')
     try:
         with LocalServer(('127.0.0.1', args.port), make_handler(args.data_dir)) as server:
-            print(f'WHOOP Analyzer: http://127.0.0.1:{args.port} (local, read only). Ctrl+C to stop.', flush=True)
+            print(f'WHOOP Analyzer: http://127.0.0.1:{args.port} (local, manual sync only). Ctrl+C to stop.', flush=True)
             server.serve_forever()
     except KeyboardInterrupt:
         return 0

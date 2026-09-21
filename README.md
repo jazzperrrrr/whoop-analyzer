@@ -391,13 +391,79 @@ command-line arguments.
 
 The dashboard reads this repository's `data/` by default, independently of the
 terminal's current directory. `--data-dir <directory>` can select another local
-snapshot. Personal CSVs remain Git-ignored and are never copied or rewritten by
-the dashboard. Refresh local data only rereads local files: it does not call WHOOP,
-refresh tokens, or synchronize data. No personal reports are saved.
+snapshot (manual sync is disabled for alternative directories). Personal CSVs
+remain Git-ignored. **Refresh local data** only rereads local files: GET requests
+never call WHOOP or refresh tokens. No personal reports are saved.
 
 CLI and dashboard share `load_daily_report()` and the existing selection,
 consistency, baseline and readiness logic. The page shows morning metrics,
-physiological state, the recorded sleep interval, recent training, and expandable
-data-quality details. It uses local CSS with no remote assets or analytics.
+physiological state, Last Sleep, recent training, and expandable data-quality
+details. It uses local CSS with no remote assets or analytics.
 Run the synthetic dashboard tests with
 `python -B -m unittest discover -s tests -p "test_whoop_dashboard.py" -v`.
+
+### Sleep product and freshness (Phase 5C)
+
+Home shows actual sleep, estimated Sleep Need, official Sleep Performance and
+Efficiency, with bedtime and wake time in the recorded offset. `/sleep` adds
+aggregate stages, the signed need breakdown, quality metrics, separate naps, and
+descriptive history. These are stage totals, not a hypnogram. Light/Deep/REM and
+restorative percentages use actual sleep; Awake uses WHOOP in-bed time. Actual
+sleep, restorative sleep and total need are locally derived; official scores stay
+distinct. Actual minus estimated need describes that night's difference, not a
+reconstruction of WHOOP's accumulated sleep debt.
+
+`whoop_sleep_product.py` consumes the existing report selection and consistency
+checks. Primary-only trends show daily observations and prior 7/14/30-calendar-day
+means with counts; D is excluded, absent dates stay absent, and every observed date
+has equal weight. Sleep Performance reuses the Daily Report's already filtered
+history, same-date aggregation and computed windows exactly. Other sleep-detail
+metrics exclude ambiguous dates. Recorded offsets remain with observations.
+No clock-time averages, predictions, medical alerts or readiness
+changes are introduced. Arithmetic is shared with the existing baseline engine.
+
+The latest available morning and its age relative to the computer's local date
+are displayed. An older date says "Local data may be out of date"; collection
+time is unknown, so this does not establish a missing sleep or failed recovery.
+
+### Explicit manual WHOOP sync
+
+**Sync WHOOP** submits `POST /sync`; it is the only dashboard path that creates
+an authenticated client. Loopback, exact Host, same Origin and a per-process form
+token are required. `Referrer-Policy: same-origin` permits the legitimate browser
+form's same-origin Origin; null and hostile origins remain rejected. The form
+token is consumed before sync and rotated: an old form cannot be replayed and
+other open tabs must reload it. Completed attempts use POST -> 303 redirect -> GET,
+so refreshing the result page never repeats collection. Result pages contain only
+fixed, sanitized status messages (their URL is not proof of a completed sync).
+The existing scopes and token-refresh/save flow are reused; credentials and raw
+responses are never rendered or persisted as API exports.
+
+The sync overlaps **three reporting dates including today** to capture recent
+revisions. Existing collection semantics pad the UTC query from midnight one day
+before the first date to midnight two days after the last, with ID lookups for
+missing relationships. Workouts use that same bounded UTC window. This is not a
+full historical sync; older revisions require a separately requested collection.
+
+`whoop_sync.py` stages normalized archives using the existing collectors,
+deterministic entity resolution and persistence. The daily snapshot retains its
+existing identities plus recent incoming identities, all using effective archive
+versions; unrelated historical archive rows are not introduced. Incoming sleeps
+do not borrow absent recoveries from an older archive. Classifications are read
+for validation and never published or changed.
+
+Only the five normalized datasets are published, with per-file atomic replacement,
+rollback copies and a durable recovery marker in Git-ignored `data/.sync-pending/`.
+Manifests are written to a temporary file, flushed, fsynced, read back and validated,
+then atomically replaced. States are `prepared`, `publishing`, `rollback_required`,
+`rollback_complete`, and `committed`. Recovery verifies every backup first and
+every restored file against its original SHA-256 (including originally absent
+files). Only then is `rollback_complete` persisted. Terminal markers survive
+backup cleanup until the last step: a crash during cleanup resumes cleanup only,
+never restoration from deleted backups. Verification failures preserve artifacts.
+Dashboard readers are locked out during publication and pause if an interrupted
+transaction remains; the next explicit sync first restores that transaction.
+An OS lock prevents concurrent dashboard syncs. Run no other collector or auth
+process concurrently: separate CSV files are not a database transaction. Token
+rotation, if required, remains managed independently by the existing auth flow.
+Tests use synthetic records, mocked collectors and temporary archives only.
