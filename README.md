@@ -467,3 +467,85 @@ An OS lock prevents concurrent dashboard syncs. Run no other collector or auth
 process concurrently: separate CSV files are not a database transaction. Token
 rotation, if required, remains managed independently by the existing auth flow.
 Tests use synthetic records, mocked collectors and temporary archives only.
+
+## Read-only Product API (Phase 6A)
+
+The existing Python domain modules remain authoritative. `whoop_product/` adds
+framework-independent dataclass contracts and Today, Sleep and Trend services.
+`repository.py` is the only product adapter that knows CSV locations. It reuses
+`load_daily_report()`, SleepProductReport and the sync read barrier, checking input
+content digests before and after loading. Services compose detached reports after
+the read lock is released. Dashboard, CLI, readiness, classification, OAuth and
+manual sync behavior are unchanged.
+
+Install the declared requirements in the project virtual environment, then launch
+the API separately (the existing dashboard remains on port 8501):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -B -m uvicorn api.app:app --host 127.0.0.1 --port 8000 --no-access-log
+```
+
+Endpoints:
+
+- `GET http://127.0.0.1:8000/api/v1/health` — service status only; no dataset access.
+- `GET /api/v1/today` — physiology, existing baselines/readiness, Last Sleep and yesterday's training.
+- `GET /api/v1/sleep/latest` — timing, aggregate stages, signed need, scores, naps and trends.
+- `GET /api/v1/trends?metric=actual_sleep&window_days=14` — existing descriptive history.
+
+Trend metrics are `actual_sleep`, `sleep_need`, `sleep_performance`,
+`sleep_efficiency`, `sleep_consistency`, `respiratory_rate`, `deep_sleep`,
+`rem_sleep`, and `restorative_sleep`. `window_days` is 7, 14 or 30 (default 14).
+Optional `anchor_date=YYYY-MM-DD` asks the existing domain selector for that
+historical morning; absent dates return 422 rather than substituting another date.
+Daily points include the anchor for display; prior summaries always exclude it.
+No gaps are zero-filled. Performance windows exactly reuse DailyReport. Other
+sleep contexts remain descriptive: required-count and eligibility are null when
+the existing sleep model defines no threshold. No clock-time averaging is added.
+
+Versioned envelopes separate `report_date`, UTC `generated_at`, and unknown
+collection freshness. `last_successful_sync_at` remains null. `snapshot_id` is an
+opaque SHA-256 of the fixed six normalized-input content digests, including the
+classification sidecar. No paths, credentials or extra entity identifiers are
+added to it. Unchanged inputs share an ID across endpoints and request times;
+changed inputs get a new ID. It describes the local dataset, not the Git commit.
+Clients should compare IDs across separate requests and reload if they differ.
+
+Snapshot acquisition takes a nonblocking, read-only OS lock on the existing
+`data/.sync.lock`. Sync holds the exclusive lock through publication and rollback;
+an interrupted transaction also blocks reads via its durable manifest. The API
+releases the lock before serialization and never creates or writes lock/data
+files. Busy, missing or unsupported locks fail safely with 503. The coordination
+file must already exist (the existing manual sync creates it); do not remove or
+replace it while services run. Other collectors must not run concurrently.
+
+Metrics distinguish available, missing, pending and withheld values, WHOOP versus
+derived origin, and null versus zero. Durations are integer milliseconds; numeric
+baseline means retain existing precision. Percentages use percentage units, never
+0-to-1 fractions. Recorded offset-aware timestamps remain unchanged. Only explicit
+product fields are serialized: no raw entities, hidden source IDs or file paths.
+Errors use `code`, `message`, `retryable` and `request_id`; corrupt or changing
+snapshots return sanitized 503, invalid queries 422, and unavailable measurements
+remain 200 with availability metadata.
+
+Public signal states are `positive`, `negative`, `neutral`, and `insufficient data`.
+Overall states retain the domain strings: `strong positive`, `strong negative`,
+`generally positive`, `generally negative`, `mixed`, and `insufficient data`.
+Availability, origin, coverage and sleep status also use finite typed strings.
+Metric reason codes remain extensible; currently supported codes are
+`ambiguous_primary_sleep`, `source_snapshot_conflict`, `primary_sleep_unavailable`,
+`sleep_not_scored`, `recovery_not_scored`, `sleep_component_unavailable`,
+`source_value_unavailable`, `historical_value_unavailable`, `nap_not_scored`, and
+`nap_value_unavailable`. Clients should tolerate unknown future reason codes.
+Historical Performance dates with a valid numeric observation remain available;
+otherwise any participating pending record makes the date pending. Numeric
+averages and baseline observation counts still come directly from DailyReport.
+
+Phase 6A has no write routes, sync route, credential reads, WHOOP requests, raw
+response exports, accounts or mobile app. Host, client-loopback and cross-origin
+checks limit this unauthenticated API to local use; do not expose it to a LAN or
+cloud. There are no remote documentation assets, CORS grants or public docs routes.
+Typed response schemas remain available in Python via `api/schemas.py` and
+`app.openapi()` for future client tooling. The mobile/network authorization and
+storage migration boundaries are future work. Tests use synthetic temporary
+inputs and an in-memory ASGI transport without another HTTP test dependency.

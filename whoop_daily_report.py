@@ -216,10 +216,14 @@ def _baselines(physiology, selection, current):
                 chronology = True
                 continue
             clean = dict(row)
+            # Share structural participation with presentation metadata. A null
+            # numeric value alone cannot distinguish excluded from pending.
+            clean["baseline_eligible"] = {}
             for metric in analysis.METRICS:
                 prefix = "sleep" if metric == "sleep_performance" else "cycle" if metric == "day_strain" else "recovery"
                 source = {"score_state": row.get(prefix + "_score_state"), metric: row.get(metric)}
                 clean[metric] = None if row.get(prefix + "_present") == "false" else _scored(source, metric)
+                clean["baseline_eligible"][metric] = row.get(prefix + "_present") != "false"
                 identity = "sleep_id" if metric == "sleep_performance" else "cycle_id"
                 if row.get(identity) in current_ids[identity]:
                     # Count scored, available measurements actually removed by
@@ -227,6 +231,7 @@ def _baselines(physiology, selection, current):
                     if metric in identity_exclusions and clean[metric] is not None:
                         identity_exclusions[metric] += 1
                     clean[metric] = None
+                    clean["baseline_eligible"][metric] = False
             history.append(clean)
         # Null anchor requests the existing algorithm's windows even if D is absent in CSV.
         anchor = {"report_date": day, "cycle_id": "report-anchor", "sleep_id": "report-anchor",

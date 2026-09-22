@@ -155,7 +155,8 @@ def compose_sleep_product(report, sleeps, today=None):
             if timestamp(candidate['end']) <= timestamp(candidate['start']):
                 continue
             if candidate['nap'] in ('true', True):
-                product.naps.append({'timing': timing(candidate), 'metrics': measurements(candidate)})
+                product.naps.append({'timing': timing(candidate), 'metrics': measurements(candidate),
+                                     'score_state': candidate.get('score_state')})
             elif candidate['nap'] in ('false', False):
                 grouped[day].append(candidate)
         except (APIError, KeyError, ValueError):
@@ -178,24 +179,30 @@ def compose_sleep_product(report, sleeps, today=None):
                 selected and timestamp(candidate['end']) >= timestamp(selected['end']))):
             continue
         values = metrics if day == anchor else measurements(candidate)
-        observations.append({'report_date': day, 'recorded_offset': candidate['timezone_offset'], 'metrics': values})
+        observations.append({'report_date': day, 'recorded_offset': candidate['timezone_offset'], 'metrics': values,
+                             'score_state': candidate.get('score_state')})
     for name in TREND_METRICS:
         points = [{'report_date': o['report_date'], 'recorded_offset': o['recorded_offset'],
-                   'value': o['metrics'][name].value} for o in observations]
+                   'value': o['metrics'][name].value, 'score_state': o['score_state']} for o in observations]
         daily_values = {point['report_date']: point['value'] for point in points}
         product.trends[name] = {'unit': metrics[name].unit, 'daily': points,
                                'windows': {n: prior_window_stats(daily_values, anchor, n) for n in (7, 14, 30)}}
     # Performance shares the report's filtered, equal-calendar-date observations
     # and already computed windows, including multiple identities on one date.
-    performance_days = daily_observations(report.baseline_observations)
+    performance_rows = [r for r in report.baseline_observations
+                        if r['baseline_eligible']['sleep_performance']]
+    performance_days = daily_observations(performance_rows)
     points = []
     for day, values in sorted(performance_days.items()):
-        offsets = sorted({r['sleep_timezone_offset'] for r in report.baseline_observations
+        offsets = sorted({r['sleep_timezone_offset'] for r in performance_rows
                           if r['report_date'] == day and r.get('sleep_timezone_offset')})
+        states = {r.get('sleep_score_state') for r in performance_rows if r['report_date']==day}
         points.append({'report_date': day, 'recorded_offset': ', '.join(offsets) or None,
-                       'value': values['sleep_performance']})
+                       'value': values['sleep_performance'],
+                       'score_state': ('PENDING_SCORE' if values['sleep_performance'] is None
+                                       and 'PENDING_SCORE' in states else None)})
     points.append({'report_date': anchor, 'recorded_offset': row.get('timezone_offset'),
-                   'value': metrics['performance_pct'].value})
+                   'value': metrics['performance_pct'].value, 'score_state': row.get('score_state')})
     product.trends['performance_pct'] = {'unit': 'percent', 'daily': points,
                                         'windows': {n: dict(report.baseline['sleep_performance'][n])
                                                     for n in (7, 14, 30)}}

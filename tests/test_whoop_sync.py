@@ -201,6 +201,18 @@ class SyncTests(unittest.TestCase):
         finally:
             lock.close()
 
+    def test_snapshot_read_lock_prevents_sync_or_recovery_until_acquisition_finishes(self):
+        sync._lock_process(self.root).close()
+        before = self.hashes()
+        source = client()
+        with sync.snapshot_read(self.root):
+            with patch.object(sync, '_recover') as recover:
+                self.assertFalse(self.run_sync(source)['success'])
+                recover.assert_not_called()
+        self.assertEqual(source.calls, [])
+        self.assertEqual(self.hashes(), before)
+        self.assertTrue(self.run_sync(source)['success'])
+
     def test_external_transaction_start_invalidates_local_read(self):
         transaction = self.root / sync.TRANSACTION
         with self.assertRaises(sync.SyncError):

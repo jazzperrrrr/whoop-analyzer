@@ -27,21 +27,40 @@ class SyncError(Exception):
     pass
 
 
-def _lock_process(directory):
-    """OS-released lock also prevents two dashboard processes rotating tokens."""
-    lock = (directory / '.sync.lock').open('a+b')
+def _lock_process(directory, *, read_only=False):
+    """Read-only snapshot locks and sync writers use the same OS-released byte.
+
+    Readers never create the coordination file. Missing/busy locks fail closed.
+    The sync owner holds its exclusive lock through recovery and publication.
+    """
+    lock = (directory / '.sync.lock').open('rb' if read_only else 'a+b')
     try:
         if os.name == 'nt':
             import msvcrt
             lock.seek(0)
-            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_NBRLCK if read_only else msvcrt.LK_NBLCK, 1)
         else:
             import fcntl
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(lock.fileno(), (fcntl.LOCK_SH if read_only else fcntl.LOCK_EX) | fcntl.LOCK_NB)
         return lock
     except Exception:
         lock.close()
         raise
+
+
+@contextmanager
+def snapshot_read(directory):
+    """Bounded cross-process acquisition, released before product serialization.
+
+    The manifest still rejects interrupted publications after the writer dies.
+    A surviving writer cannot publish or roll back while this lock is held.
+    """
+    lock = _lock_process(Path(directory), read_only=True)
+    try:
+        with local_read(directory):
+            yield
+    finally:
+        lock.close()
 
 
 @contextmanager
