@@ -10,12 +10,13 @@ T = TypeVar('T')
 
 
 class Health(BaseModel):
-    status: Literal['ok'] = 'ok'
-    schema_version: Literal['v1'] = 'v1'
+    status: Literal['ok']
+    schema_version: Literal['v1']
 
 
 class Error(BaseModel):
-    code: str
+    code: Literal['local_access_only', 'not_found', 'read_only', 'invalid_query',
+                  'internal_error', 'snapshot_unavailable']
     message: str
     retryable: bool
     request_id: str
@@ -34,9 +35,16 @@ class Envelope(BaseModel, Generic[T]):
     data: T
 
 
-TodayResponse = Envelope[TodayReport]
-SleepResponse = Envelope[SleepReport]
-TrendResponse = Envelope[TrendReport]
+class TodayResponse(Envelope[TodayReport]):
+    pass
+
+
+class SleepResponse(Envelope[SleepReport]):
+    pass
+
+
+class TrendResponse(Envelope[TrendReport]):
+    pass
 
 
 def serialize_product(envelope, schema):

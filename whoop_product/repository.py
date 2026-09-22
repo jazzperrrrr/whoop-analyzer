@@ -10,7 +10,8 @@ import whoop_analysis as analysis
 import whoop_daily_report as daily
 import whoop_entities as entities
 from whoop_sleep_product import compose_sleep_product, freshness
-from whoop_sync import snapshot_read
+from whoop_sync import snapshot_read, SyncError
+from whoop_fetch import APIError
 
 INPUTS = ('sleeps.csv', 'recoveries.csv', 'cycles.csv', 'daily_metrics.csv',
           'workouts.csv', 'workout_classifications.csv')
@@ -99,5 +100,5 @@ class CsvProductRepository:
                 snapshot_id = hashlib.sha256(('snapshot-v1|'+'|'.join(before)).encode()).hexdigest()
                 metadata = SnapshotMetadata(snapshot_id, now.astimezone(timezone.utc), report.report_date)
                 return ReadSnapshot(report, tables, physiology, metadata, now.date())
-        except Exception:
+        except (OSError, APIError, analysis.AnalysisError, SyncError, SnapshotUnavailable):
             raise SnapshotUnavailable('Local snapshot unavailable.') from None

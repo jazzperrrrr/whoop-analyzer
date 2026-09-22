@@ -12,6 +12,7 @@ from test_whoop_dashboard import write_inputs
 from test_whoop_daily_report import D, entities
 from test_whoop_sleep import EXPECTED
 from whoop_entities import SCHEMAS
+from whoop_workouts import save_workouts
 from whoop_product.repository import CsvProductRepository
 
 NOW = datetime(2026,9,12,12,tzinfo=timezone.utc)
@@ -48,6 +49,7 @@ class SyntheticInputs:
             return original(path,*args,**kwargs)
         self.enterContext(patch.object(Path,'open',guarded))
         write_inputs(self.root,extended=True)
+        save_workouts({}, self.root)
         # Sync creates this coordination file; API readers only open it read-only.
         (self.root/'.sync.lock').touch()
         def add(rows):

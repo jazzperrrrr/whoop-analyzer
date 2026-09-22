@@ -33,8 +33,8 @@ class APITests(SyntheticInputs,unittest.IsolatedAsyncioTestCase):
         self.assertEqual((status,sleep_status),(200,200))
         self.assertEqual(today['report_date'],str(D))
         self.assertEqual(today['snapshot_id'],sleep['snapshot_id'])
-        self.assertEqual(today['data']['physiology']['hrv_ms']['metric']['value'],get_today(self.repo).data.physiology['hrv_ms'].metric.value)
-        self.assertEqual(sleep['data']['metrics']['actual_sleep_ms']['value'],get_sleep(self.repo).data.metrics['actual_sleep_ms'].value)
+        self.assertEqual(today['data']['physiology']['hrv_ms']['metric']['value'],get_today(self.repo).data.physiology.hrv_ms.metric.value)
+        self.assertEqual(sleep['data']['metrics']['actual_sleep_ms']['value'],get_sleep(self.repo).data.metrics.actual_sleep_ms.value)
         self.assertIsNone(today['last_successful_sync_at'])
         self.assertEqual(headers[b'cache-control'],b'no-store')
 
@@ -56,12 +56,13 @@ class APITests(SyntheticInputs,unittest.IsolatedAsyncioTestCase):
             self.assertEqual(set(data),{'code','message','retryable','request_id'})
             self.assertNotIn('secret',json.dumps(data))
 
-    async def test_internal_failure_is_sanitized_503(self):
+    async def test_internal_failure_is_sanitized_500(self):
         repository=Mock()
         repository.read_snapshot.side_effect=RuntimeError('private path / synthetic-secret')
         status,data,_=await request(create_app(repository),'/api/v1/today')
-        self.assertEqual(status,503)
-        self.assertTrue(data['retryable'])
+        self.assertEqual(status,500)
+        self.assertFalse(data['retryable'])
+        self.assertEqual(data['code'], 'internal_error')
         self.assertNotIn('synthetic-secret',json.dumps(data))
         self.assertNotIn('private path',json.dumps(data))
 

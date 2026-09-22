@@ -470,6 +470,12 @@ Tests use synthetic records, mocked collectors and temporary archives only.
 
 ## Read-only Product API (Phase 6A)
 
+Phase 6B freezes the Mobile V1 representation. See the
+[API V1 contract](docs/API_V1_CONTRACT.md) for the exact typed fields, enums,
+reason/quality mappings, strict queries, errors, nap scope and compatibility rules,
+and [complete synthetic examples](tests/fixtures/api_v1_examples.json).
+Analytics, Dashboard, Sync and snapshot hashing are unchanged.
+
 The existing Python domain modules remain authoritative. `whoop_product/` adds
 framework-independent dataclass contracts and Today, Sleep and Trend services.
 `repository.py` is the only product adapter that knows CSV locations. It reuses
@@ -533,13 +539,22 @@ Overall states retain the domain strings: `strong positive`, `strong negative`,
 `generally positive`, `generally negative`, `mixed`, and `insufficient data`.
 Availability, origin, coverage and sleep status also use finite typed strings.
 Metric reason codes remain extensible; currently supported codes are
-`ambiguous_primary_sleep`, `source_snapshot_conflict`, `primary_sleep_unavailable`,
+`ambiguous_primary_sleep`, `conflicting_measurements`, `primary_sleep_unavailable`,
 `sleep_not_scored`, `recovery_not_scored`, `sleep_component_unavailable`,
-`source_value_unavailable`, `historical_value_unavailable`, `nap_not_scored`, and
+`measurement_unavailable`, `historical_value_unavailable`, `nap_not_scored`, and
 `nap_value_unavailable`. Clients should tolerate unknown future reason codes.
 Historical Performance dates with a valid numeric observation remain available;
 otherwise any participating pending record makes the date pending. Numeric
 averages and baseline observation counts still come directly from DailyReport.
+
+Mobile interpretation uses structured branch reason codes; existing domain prose
+remains for Dashboard/CLI. Public quality codes use an explicit product allowlist.
+Naps include only the report date by each nap's recorded local end date, with
+timing and actual sleep only. Training availability distinguishes a readable empty
+record set from an unavailable dataset, while calendar coverage remains unknown.
+Trend queries reject noncanonical dates, duplicate keys and unknown keys. Expected
+snapshot failures remain sanitized 503; unexpected application faults return
+sanitized 500. OpenAPI explicitly describes the custom Error responses.
 
 Phase 6A has no write routes, sync route, credential reads, WHOOP requests, raw
 response exports, accounts or mobile app. Host, client-loopback and cross-origin

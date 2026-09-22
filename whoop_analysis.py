@@ -35,17 +35,20 @@ def classify_signal(metric, entry):
     stats = entry["baselines"][INTERPRETATION_WINDOW]
     coverage = f"{stats['days_available']}/{INTERPRETATION_WINDOW} prior days"
     if entry["value"] is None:
-        return {"state": "insufficient data", "explanation": f"latest value missing; {coverage}"}
+        return {"state": "insufficient data", "reason_codes": ["latest_value_unavailable"],
+                "explanation": f"latest value missing; {coverage}"}
     if stats["days_available"] < MIN_BASELINE_DAYS or stats["average"] is None:
-        return {"state": "insufficient data", "explanation":
+        return {"state": "insufficient data", "reason_codes": ["insufficient_baseline"], "explanation":
                 f"insufficient baseline: {coverage}; need {MIN_BASELINE_DAYS}; no prior observations" if not stats["days_available"] else
                 f"insufficient baseline: {coverage}; need {MIN_BASELINE_DAYS}"}
     change = stats[rule["comparison"]]
     if change is None or not math.isfinite(change):
-        return {"state": "insufficient data", "explanation": f"comparison undefined (zero baseline or numeric limit); {coverage}"}
+        return {"state": "insufficient data", "reason_codes": ["comparison_undefined"],
+                "explanation": f"comparison undefined (zero baseline or numeric limit); {coverage}"}
     directed = change * rule["direction"]
     state = "positive" if directed >= rule["threshold"] else "negative" if directed <= -rule["threshold"] else "neutral"
-    return {"state": state, "explanation":
+    reason = 'near_baseline' if state == 'neutral' else 'above_baseline' if change > 0 else 'below_baseline'
+    return {"state": state, "reason_codes": [reason], "explanation":
             f"{change:+.2f} {rule['unit']} vs 14-day mean {stats['average']:.2f}; {coverage}"}
 
 
@@ -61,11 +64,14 @@ def interpret_record(record):
     positive = [METRICS[m][0] for m, s in signals.items() if s["state"] == "positive"]
     negative = [METRICS[m][0] for m, s in signals.items() if s["state"] == "negative"]
     explanations = []
+    reason_codes = []
     if positive and negative:
+        reason_codes.append('conflicting_signals')
         explanations.append(f"Conflicting signals: {', '.join(positive)} positive; {', '.join(negative)} negative. Directions are not averaged away.")
     if (any(signals[m]["state"] == "insufficient data" for m in ("hrv_ms", "resting_heart_rate_bpm"))
             or states.count("insufficient data") > 1):
         overall = "insufficient data"
+        reason_codes.append('insufficient_signal_coverage')
         explanations.append("Overall requires both physiological signals and at least one context signal with sufficient baseline coverage.")
     elif positive and negative:
         overall = "mixed"
@@ -79,10 +85,13 @@ def interpret_record(record):
         overall = "generally negative"
     else:
         overall = "mixed"
+        reason_codes.append('no_directional_signal')
         explanations.append("All classified signals are near baseline; there is no clear positive or negative direction.")
     if "insufficient data" in states:
+        reason_codes.append('signals_unavailable')
         explanations.append("Unavailable signals remain unclassified; no values are substituted.")
-    return {"overall_state": overall, "signals": signals, "explanations": explanations}
+    return {"overall_state": overall, "signals": signals, "explanations": explanations,
+            "window_days": INTERPRETATION_WINDOW, "reason_codes": reason_codes}
 
 
 class AnalysisError(Exception):

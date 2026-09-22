@@ -2,28 +2,49 @@
 
 from datetime import date
 import re
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
+from pydantic import BeforeValidator
 
-from whoop_product.repository import CsvProductRepository, InvalidAnchor
+from whoop_product.repository import CsvProductRepository, InvalidAnchor, SnapshotUnavailable
+from whoop_product.models import TrendName
 from whoop_product.today_service import get_today
 from whoop_product.sleep_service import get_sleep
 from whoop_product.trend_service import get_trend, InvalidTrend
 from .schemas import Health, Error, TodayResponse, SleepResponse, TrendResponse, serialize_product
 
-TrendName = Literal['actual_sleep','sleep_need','sleep_performance','sleep_efficiency',
-                    'sleep_consistency','respiratory_rate','deep_sleep','rem_sleep','restorative_sleep']
+ERRORS = {
+    403: ('local_access_only', 'Local access only.'),
+    404: ('not_found', 'Route not found.'),
+    405: ('read_only', 'This API accepts GET only.'),
+    422: ('invalid_query', 'Invalid query parameters.'),
+    500: ('internal_error', 'Internal service error.'),
+    503: ('snapshot_unavailable', 'Local snapshot unavailable.'),
+}
+ERROR_RESPONSES = {status: {'model': Error, 'description': message}
+                   for status, (_, message) in ERRORS.items()}
+
+
+def canonical_date(value):
+    if value is not None and (not isinstance(value, str) or
+                             not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', value)):
+        raise ValueError('Expected YYYY-MM-DD.')
+    return value
+
+
+AnchorDate = Annotated[date | None, BeforeValidator(canonical_date)]
 
 
 def create_app(repository=None):
     repo = repository if repository is not None else CsvProductRepository()
     application = FastAPI(title='WHOOP read-only product API',version='v1',
-                          docs_url=None,redoc_url=None,openapi_url=None)
+                          docs_url=None,redoc_url=None,openapi_url=None,
+                          responses=ERROR_RESPONSES)
 
     def error(request, status, code, message, retryable=False):
         result = Error(code=code,message=message,retryable=retryable,request_id=request.state.request_id)
@@ -42,13 +63,19 @@ def create_app(repository=None):
             response = error(request,403,'local_access_only','Local access only.')
         elif request.method != 'GET':
             response = error(request,405,'read_only','This API accepts GET only.')
+        elif request.url.path.rstrip('/') == '/api/v1/trends' and (
+                set(request.query_params) - {'metric', 'anchor_date', 'window_days'} or
+                any(len(request.query_params.getlist(name)) != 1 for name in request.query_params)):
+            response = error(request,422,'invalid_query','Invalid query parameters.')
         else:
             try:
                 response = await call_next(request)
             except (InvalidAnchor,InvalidTrend):
                 response = error(request,422,'invalid_query','Unsupported metric, window or anchor date.')
-            except Exception:
+            except SnapshotUnavailable:
                 response = error(request,503,'snapshot_unavailable','Local snapshot unavailable.',True)
+            except Exception:
+                response = error(request,500,'internal_error','Internal service error.')
         response.headers['Cache-Control'] = 'no-store'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'no-referrer'
@@ -61,23 +88,24 @@ def create_app(repository=None):
 
     @application.exception_handler(HTTPException)
     async def http_error(request, exc):
-        return error(request,exc.status_code,'not_found' if exc.status_code==404 else 'request_rejected',
-                     'Route not found.' if exc.status_code==404 else 'Request rejected.')
+        status = exc.status_code if exc.status_code in ERRORS else 500
+        code, message = ERRORS[status]
+        return error(request, status, code, message, status == 503)
 
-    @application.get('/api/v1/health',response_model=Health)
+    @application.get('/api/v1/health',response_model=Health,operation_id='get_health')
     def health():
-        return Health()
+        return Health(status='ok', schema_version='v1')
 
-    @application.get('/api/v1/today',response_model=TodayResponse)
+    @application.get('/api/v1/today',response_model=TodayResponse,operation_id='get_today')
     def today():
         return serialize_product(get_today(repo),TodayResponse)
 
-    @application.get('/api/v1/sleep/latest',response_model=SleepResponse)
+    @application.get('/api/v1/sleep/latest',response_model=SleepResponse,operation_id='get_latest_sleep')
     def sleep():
         return serialize_product(get_sleep(repo),SleepResponse)
 
-    @application.get('/api/v1/trends',response_model=TrendResponse)
-    def trends(metric: TrendName, anchor_date: date | None = None, window_days: Literal['7','14','30'] = '14'):
+    @application.get('/api/v1/trends',response_model=TrendResponse,operation_id='get_trends')
+    def trends(metric: TrendName, anchor_date: AnchorDate = None, window_days: Literal['7','14','30'] = '14'):
         return serialize_product(get_trend(repo,metric,anchor_date,int(window_days)),TrendResponse)
 
     return application

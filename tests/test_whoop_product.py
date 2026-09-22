@@ -1,7 +1,7 @@
 """Product service contracts, entirely synthetic and offline."""
 
 import ast
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from datetime import timedelta
 import json
 from pathlib import Path
@@ -64,41 +64,44 @@ class ProductTests(SyntheticInputs,unittest.TestCase):
         domain=daily.load_daily_report(self.root)
         result=get_today(self.repo)
         self.assertEqual(result.report_date,domain.report_date)
-        for name,p in result.data.physiology.items():
+        for name,p in ((f.name, getattr(result.data.physiology, f.name)) for f in fields(result.data.physiology)):
             self.assertEqual(p.metric.value,domain.physiology[name]['value'])
             for b in p.baselines:
                 original=domain.baseline[name][b.window_days]
                 self.assertEqual((b.average,b.difference,b.observed_days,b.eligible),
                                  (original['average'],original['difference'],original['days_available'],original['eligible']))
                 self.assertEqual(b.percentage_deviation,original['percentage_deviation'])
-        self.assertEqual(asdict(result.data.interpretation),domain.interpretation)
+        self.assertEqual(result.data.interpretation.overall_state, domain.interpretation['overall_state'])
+        for name, signal in asdict(result.data.interpretation.signals).items():
+            self.assertEqual(signal['state'], domain.interpretation['signals'][name]['state'])
+            self.assertEqual(signal['reason_codes'], domain.interpretation['signals'][name]['reason_codes'])
         self.assertEqual(result.data.last_sleep.actual_sleep.value,domain.sleep_product.metrics['actual_sleep_ms'].value)
         self.assertEqual(result.data.yesterday_training.record_count,domain.yesterday_training['record_count'])
 
     def test_sleep_exact_values_origins_and_separate_naps(self):
         domain=daily.load_daily_report(self.root).sleep_product
         product=get_sleep(self.repo).data
-        for name,metric in product.metrics.items():
+        for name,metric in ((f.name, getattr(product.metrics, f.name)) for f in fields(product.metrics)):
             self.assertEqual(metric.value,domain.metrics[name].value)
             self.assertEqual(metric.origin,domain.metrics[name].origin)
-        self.assertEqual(product.metrics['nap_adjustment_ms'].value,-1500)
+        self.assertEqual(product.metrics.nap_adjustment_ms.value,-1500)
         self.assertEqual(len(product.naps),1)
-        self.assertEqual(product.naps[0].metrics['rem_ms'].value,1000)
-        self.assertEqual(product.metrics['rem_ms'].value,2500)
+        self.assertEqual(product.naps[0].actual_sleep.value,7000)
+        self.assertEqual(product.metrics.rem_ms.value,2500)
         self.assertIsNotNone(product.timing.local_start.utcoffset())
 
     def test_missing_zero_pending_and_conflict_are_distinct(self):
         rewrite(self.root,'sleeps',lambda rows:rows[0].update(total_rem_sleep_time_ms='0',respiratory_rate=''))
         product=get_sleep(self.repo).data
-        self.assertEqual(product.metrics['rem_ms'].value,0)
-        self.assertEqual(product.metrics['rem_ms'].availability,'available')
-        self.assertEqual(product.metrics['respiratory_rate'].availability,'missing')
+        self.assertEqual(product.metrics.rem_ms.value,0)
+        self.assertEqual(product.metrics.rem_ms.availability,'available')
+        self.assertEqual(product.metrics.respiratory_rate.availability,'missing')
         from whoop_sleep import EXTENDED_FIELDS
         rewrite(self.root,'sleeps',lambda rows:rows[0].update(score_state='PENDING_SCORE',**{f:'' for f in EXTENDED_FIELDS}))
         # No current daily row means unverified, not an explicit conflicting score state.
-        self.assertEqual(get_sleep(self.repo).data.metrics['actual_sleep_ms'].availability,'pending')
+        self.assertEqual(get_sleep(self.repo).data.metrics.actual_sleep_ms.availability,'pending')
         rewrite(self.root,'sleeps',lambda rows:rows.append(dict(rows[0],sleep_id='synthetic-duplicate')))
-        self.assertEqual(get_sleep(self.repo).data.metrics['actual_sleep_ms'].availability,'withheld')
+        self.assertEqual(get_sleep(self.repo).data.metrics.actual_sleep_ms.availability,'withheld')
 
     def test_explicit_snapshot_conflict_is_withheld(self):
         def current(rows):
@@ -106,8 +109,8 @@ class ProductTests(SyntheticInputs,unittest.TestCase):
             rows.append(row)
         rewrite(self.root,'daily_metrics',current)
         result=get_today(self.repo)
-        self.assertEqual(result.data.physiology['sleep_performance'].metric.availability,'withheld')
-        self.assertIn('source_snapshot_conflict',result.data.physiology['sleep_performance'].metric.reason_codes)
+        self.assertEqual(result.data.physiology.sleep_performance.metric.availability,'withheld')
+        self.assertIn('conflicting_measurements',result.data.physiology.sleep_performance.metric.reason_codes)
         point=get_trend(self.repo,'sleep_performance').data.daily_points[-1]
         self.assertEqual(point.metric.availability,'withheld')
 
@@ -118,7 +121,7 @@ class ProductTests(SyntheticInputs,unittest.TestCase):
                 row.update(score_state='PENDING_SCORE',**{f:'' for f in EXTENDED_FIELDS})
         rewrite(self.root,'sleeps',pending)
         result=get_sleep(self.repo).data
-        self.assertEqual(result.naps[0].metrics['actual_sleep_ms'].availability,'pending')
+        self.assertEqual(result.naps[0].actual_sleep.availability,'pending')
         points=get_trend(self.repo,'actual_sleep').data.daily_points
         self.assertEqual(points[-1].metric.availability,'pending')
         self.assertEqual(next(p for p in points if p.report_date==D-timedelta(days=1)).metric.availability,'pending')
