@@ -1,0 +1,2068 @@
+{
+  "today": {
+    "schema_version": "v1",
+    "analysis_version": "phase5c-v1",
+    "snapshot_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "generated_at": "2026-09-10T08:00:00Z",
+    "report_date": "2026-09-10",
+    "latest_available_morning": "2026-09-10",
+    "collection_freshness": {
+      "status": "unknown",
+      "days_since_latest_available_morning": null,
+      "may_be_out_of_date": false,
+      "collection_time_known": false
+    },
+    "last_successful_sync_at": null,
+    "data": {
+      "latest_available_morning": "2026-09-10",
+      "physiology": {
+        "recovery_score": {
+          "metric": {
+            "value": 72,
+            "unit": "percent",
+            "origin": "whoop",
+            "availability": "available",
+            "reason_codes": []
+          },
+          "baselines": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": 7,
+              "average": 60,
+              "difference": 12,
+              "percentage_deviation": 20.0,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 60,
+              "difference": 12,
+              "percentage_deviation": 20.0,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 60,
+              "difference": 12,
+              "percentage_deviation": 20.0,
+              "eligible": true,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "hrv_ms": {
+          "metric": {
+            "value": 64,
+            "unit": "ms",
+            "origin": "whoop",
+            "availability": "available",
+            "reason_codes": []
+          },
+          "baselines": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": 7,
+              "average": 55,
+              "difference": 9,
+              "percentage_deviation": 16.363636363636363,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 55,
+              "difference": 9,
+              "percentage_deviation": 16.363636363636363,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 55,
+              "difference": 9,
+              "percentage_deviation": 16.363636363636363,
+              "eligible": true,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "resting_heart_rate_bpm": {
+          "metric": {
+            "value": 54,
+            "unit": "bpm",
+            "origin": "whoop",
+            "availability": "available",
+            "reason_codes": []
+          },
+          "baselines": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": 7,
+              "average": 50,
+              "difference": 4,
+              "percentage_deviation": 8.0,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 50,
+              "difference": 4,
+              "percentage_deviation": 8.0,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 50,
+              "difference": 4,
+              "percentage_deviation": 8.0,
+              "eligible": true,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "sleep_performance": {
+          "metric": {
+            "value": 84,
+            "unit": "percent",
+            "origin": "whoop",
+            "availability": "available",
+            "reason_codes": []
+          },
+          "baselines": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": 7,
+              "average": 77,
+              "difference": 7,
+              "percentage_deviation": 9.090909090909092,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 77,
+              "difference": 7,
+              "percentage_deviation": 9.090909090909092,
+              "eligible": true,
+              "coverage_status": "full"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 14,
+              "required_days": 7,
+              "average": 77,
+              "difference": 7,
+              "percentage_deviation": 9.090909090909092,
+              "eligible": true,
+              "coverage_status": "partial"
+            }
+          ]
+        }
+      },
+      "interpretation": {
+        "overall_state": "mixed",
+        "window_days": 14,
+        "signals": {
+          "recovery_score": {
+            "state": "positive",
+            "reason_codes": [
+              "above_baseline"
+            ]
+          },
+          "hrv_ms": {
+            "state": "positive",
+            "reason_codes": [
+              "above_baseline"
+            ]
+          },
+          "resting_heart_rate_bpm": {
+            "state": "negative",
+            "reason_codes": [
+              "above_baseline"
+            ]
+          },
+          "sleep_performance": {
+            "state": "positive",
+            "reason_codes": [
+              "above_baseline"
+            ]
+          }
+        },
+        "reason_codes": [
+          "conflicting_signals"
+        ]
+      },
+      "last_sleep": {
+        "status": "available",
+        "timing": {
+          "local_start": "2026-09-09T23:20:00+01:00",
+          "local_end": "2026-09-10T07:00:00+01:00",
+          "recorded_offset": "+01:00",
+          "recorded_interval_ms": 27600000
+        },
+        "actual_sleep": {
+          "value": 25920000,
+          "unit": "ms",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "sleep_need": {
+          "value": 30840000,
+          "unit": "ms",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "sleep_performance": {
+          "value": 84,
+          "unit": "percent",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "sleep_efficiency": {
+          "value": 93.91304347826087,
+          "unit": "percent",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        }
+      },
+      "yesterday_training": {
+        "availability": "missing",
+        "start_date": "2026-09-09",
+        "end_date": "2026-09-09",
+        "record_count": null,
+        "observed_dates": null,
+        "duration_ms": null,
+        "calendar_coverage": "unknown",
+        "activities": []
+      },
+      "quality_codes": []
+    }
+  },
+  "sleep": {
+    "schema_version": "v1",
+    "analysis_version": "phase5c-v1",
+    "snapshot_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "generated_at": "2026-09-10T08:00:00Z",
+    "report_date": "2026-09-10",
+    "latest_available_morning": "2026-09-10",
+    "collection_freshness": {
+      "status": "unknown",
+      "days_since_latest_available_morning": null,
+      "may_be_out_of_date": false,
+      "collection_time_known": false
+    },
+    "last_successful_sync_at": null,
+    "data": {
+      "report_date": "2026-09-10",
+      "status": "available",
+      "timing": {
+        "local_start": "2026-09-09T23:20:00+01:00",
+        "local_end": "2026-09-10T07:00:00+01:00",
+        "recorded_offset": "+01:00",
+        "recorded_interval_ms": 27600000
+      },
+      "metrics": {
+        "in_bed_ms": {
+          "value": 27600000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "awake_ms": {
+          "value": 1680000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "no_data_ms": {
+          "value": 0,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "light_ms": {
+          "value": 13680000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "deep_ms": {
+          "value": 5400000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "rem_ms": {
+          "value": 6840000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "baseline_need_ms": {
+          "value": 28080000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "sleep_debt_need_ms": {
+          "value": 2520000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "recent_strain_need_ms": {
+          "value": 1080000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "nap_adjustment_ms": {
+          "value": -840000,
+          "unit": "ms",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "performance_pct": {
+          "value": 84,
+          "unit": "percent",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "efficiency_pct": {
+          "value": 93.91304347826087,
+          "unit": "percent",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "consistency_pct": {
+          "value": 82,
+          "unit": "percent",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "respiratory_rate": {
+          "value": 14.2,
+          "unit": "breaths/min",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "sleep_cycle_count": {
+          "value": 5,
+          "unit": "count",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "disturbance_count": {
+          "value": 7,
+          "unit": "count",
+          "origin": "whoop",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "actual_sleep_ms": {
+          "value": 25920000,
+          "unit": "ms",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "restorative_sleep_ms": {
+          "value": 12240000,
+          "unit": "ms",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "total_need_ms": {
+          "value": 30840000,
+          "unit": "ms",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "actual_minus_need_ms": {
+          "value": -4920000,
+          "unit": "ms",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "light_pct_actual_sleep": {
+          "value": 52.77777777777778,
+          "unit": "percent",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "deep_pct_actual_sleep": {
+          "value": 20.833333333333336,
+          "unit": "percent",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "rem_pct_actual_sleep": {
+          "value": 26.38888888888889,
+          "unit": "percent",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "restorative_pct_actual_sleep": {
+          "value": 47.22222222222222,
+          "unit": "percent",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        },
+        "awake_pct_in_bed": {
+          "value": 6.086956521739131,
+          "unit": "percent",
+          "origin": "derived",
+          "availability": "available",
+          "reason_codes": []
+        }
+      },
+      "quality_codes": [],
+      "naps": [
+        {
+          "timing": {
+            "local_start": "2026-09-10T13:00:00+01:00",
+            "local_end": "2026-09-10T13:20:00+01:00",
+            "recorded_offset": "+01:00",
+            "recorded_interval_ms": 1200000
+          },
+          "actual_sleep": {
+            "value": 840000,
+            "unit": "ms",
+            "origin": "derived",
+            "availability": "available",
+            "reason_codes": []
+          }
+        }
+      ],
+      "trends": {
+        "actual_sleep": {
+          "metric": "actual_sleep",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 27720000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 26700000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 28680000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 25260000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 29760000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 26280000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 28020000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 25920000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 27600000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 27450000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 27488571.42857143,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "sleep_need": {
+          "metric": "sleep_need",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 29700000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 30240000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 30660000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 30540000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 31200000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 30420000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 30960000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 30840000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 30756000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 30670000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 30531428.57142857,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "sleep_performance": {
+          "metric": "sleep_performance",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 93,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 88,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 94,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 83,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 95,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 86,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 90,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 84,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 89.6,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 89.33333333333333,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 89.85714285714286,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "sleep_efficiency": {
+          "metric": "sleep_efficiency",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 95,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 93,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 96,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 91,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 97,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 92,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 95,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 93.91304347826087,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 94.2,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 94.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 94.14285714285714,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "sleep_consistency": {
+          "metric": "sleep_consistency",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 84,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 79,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 87,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 73,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 85,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 78,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 86,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 82,
+                "unit": "percent",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 81.8,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 81.33333333333333,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 81.71428571428571,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "respiratory_rate": {
+          "metric": "respiratory_rate",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.3,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.1,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.5,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.0,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.4,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.1,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.3,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14.2,
+                "unit": "breaths/min",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 14.26,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 14.233333333333334,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 14.242857142857144,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "deep_sleep": {
+          "metric": "deep_sleep",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 5940000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 5040000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6120000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 5160000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6420000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 5520000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6060000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 5400000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 5856000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 5720000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 5751428.571428572,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "rem_sleep": {
+          "metric": "rem_sleep",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 7140000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6480000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 7560000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6300000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 7920000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6960000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 7260000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 6840000,
+                "unit": "ms",
+                "origin": "whoop",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 7200000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 7080000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 7088571.428571428,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        },
+        "restorative_sleep": {
+          "metric": "restorative_sleep",
+          "anchor_date": "2026-09-10",
+          "window_days": null,
+          "daily_points": [
+            {
+              "report_date": "2026-08-15",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 13080000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-08-29",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 11520000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-03",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 13680000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-04",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 11460000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-06",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 14340000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-07",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": null,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "pending",
+                "reason_codes": [
+                  "sleep_not_scored"
+                ]
+              }
+            },
+            {
+              "report_date": "2026-09-08",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 12480000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-09",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 13320000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            },
+            {
+              "report_date": "2026-09-10",
+              "recorded_offsets": [
+                "+01:00"
+              ],
+              "metric": {
+                "value": 12240000,
+                "unit": "ms",
+                "origin": "derived",
+                "availability": "available",
+                "reason_codes": []
+              }
+            }
+          ],
+          "prior_windows": [
+            {
+              "window_days": 7,
+              "window_start": "2026-09-03",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 5,
+              "required_days": null,
+              "average": 13056000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 14,
+              "window_start": "2026-08-27",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 6,
+              "required_days": null,
+              "average": 12800000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            },
+            {
+              "window_days": 30,
+              "window_start": "2026-08-11",
+              "window_end": "2026-09-09",
+              "anchor_date": "2026-09-10",
+              "includes_anchor": false,
+              "observed_days": 7,
+              "required_days": null,
+              "average": 12840000.0,
+              "difference": null,
+              "percentage_deviation": null,
+              "eligible": null,
+              "coverage_status": "partial"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "notice": "Completely fictional mobile visual-demo values. No person, device, WHOOP request or repository health data is represented."
+}

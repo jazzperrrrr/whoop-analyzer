@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+dist/
+coverage/
+.jest-cache/
+expo-env.d.ts
+*.tsbuildinfo
+.env*
+android/
+ios/
+npm-debug.log*
