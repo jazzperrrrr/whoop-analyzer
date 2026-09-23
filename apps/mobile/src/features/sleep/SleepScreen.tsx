@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import type { SleepResponse, SleepMetrics } from '../../types/api-v1';
-import { Copy, DemoBadge, MetricValue, Page, QualityNotes, Row, Section, SleepTiming, styles } from '../../components/ui';
+import { Copy, DataModeBadge, MetricValue, Page, QualityNotes, Row, Section, SleepTiming, styles } from '../../components/ui';
 import { dateText, metricText, needDifferenceText } from '../../design/format';
 import { colors, radius, space } from '../../design/tokens';
 import { Trend } from './Trend';
@@ -19,7 +19,7 @@ export function SleepScreen({ response }: { response: SleepResponse }) {
   const completeStages = stages.every(s => m[s.percentage].availability === 'available' && m[s.percentage].value !== null && Number.isFinite(m[s.percentage].value));
   return <Page>
     <View testID="sleep-hero" style={{ gap: space.xl }}>
-      <View style={{ gap: space.sm }}><Copy kind="caption" muted>{dateText(response.report_date)}</Copy><Copy kind="title">Your night</Copy><DemoBadge/></View>
+      <View style={{ gap: space.sm }}><Copy kind="caption" muted>{dateText(response.report_date)}</Copy><Copy kind="title">Your night</Copy><DataModeBadge/></View>
       <MetricValue label="Actual Sleep" metric={m.actual_sleep_ms} format="duration" hero/>
       <View style={{ gap: space.xs }}><SleepTiming timing={timing}/><Copy muted>{metricText(m.total_need_ms, 'duration')} estimated need</Copy></View>
       <View testID="sleep-scores" style={styles.threeColumns}>

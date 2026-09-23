@@ -1,6 +1,7 @@
 """Local read-only API. Importing this module performs no input reads or networking."""
 
 from datetime import date
+import os
 import re
 from typing import Annotated, Literal
 from uuid import uuid4
@@ -40,7 +41,11 @@ def canonical_date(value):
 AnchorDate = Annotated[date | None, BeforeValidator(canonical_date)]
 
 
-def create_app(repository=None):
+EXPO_WEB_ORIGINS = frozenset(('http://localhost:8081', 'http://127.0.0.1:8081'))
+V1_PATHS = frozenset(('/api/v1/health', '/api/v1/today', '/api/v1/sleep/latest', '/api/v1/trends'))
+
+
+def create_app(repository=None, *, expo_web=False):
     repo = repository if repository is not None else CsvProductRepository()
     application = FastAPI(title='WHOOP read-only product API',version='v1',
                           docs_url=None,redoc_url=None,openapi_url=None,
@@ -57,9 +62,12 @@ def create_app(repository=None):
         host = hosts[0] if len(hosts)==1 else ''
         allowed = re.fullmatch(r'(?:127\.0\.0\.1|localhost|\[::1\])(?::[0-9]{1,5})?',host)
         origin = request.headers.getlist('origin')
-        if (not allowed or not request.client or request.client.host not in ('127.0.0.1','::1')
-                or (origin and origin != ['http://'+host])
-                or request.headers.get('sec-fetch-site')=='cross-site'):
+        local_client = bool(allowed and request.client and request.client.host in ('127.0.0.1','::1'))
+        # Opt-in transport allowance only. No credentials, wildcard, preflight or new routes.
+        expo_origin = (expo_web and local_client and len(origin) == 1
+                       and origin[0] in EXPO_WEB_ORIGINS and request.url.path in V1_PATHS)
+        if (not local_client or (origin and origin != ['http://'+host] and not expo_origin)
+                or (request.headers.get('sec-fetch-site')=='cross-site' and not expo_origin)):
             response = error(request,403,'local_access_only','Local access only.')
         elif request.method != 'GET':
             response = error(request,405,'read_only','This API accepts GET only.')
@@ -80,6 +88,9 @@ def create_app(repository=None):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'no-referrer'
         response.headers['X-Request-ID'] = request.state.request_id
+        if expo_origin and request.method == 'GET':
+            response.headers['Access-Control-Allow-Origin'] = origin[0]
+            response.headers['Vary'] = 'Origin'
         return response
 
     @application.exception_handler(RequestValidationError)
@@ -111,4 +122,4 @@ def create_app(repository=None):
     return application
 
 
-app = create_app()
+app = create_app(expo_web=os.environ.get('WHOOP_API_EXPO_WEB') == '1')

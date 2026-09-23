@@ -1,5 +1,6 @@
 import type { TodayResponse, SleepResponse } from '../types/api-v1';
 import type { ApiClient } from '../api/client';
+import { ApiFailure } from '../api/errors';
 
 export type SnapshotIdentity = Pick<TodayResponse, 'schema_version' | 'analysis_version' | 'snapshot_id'>;
 export function sameSnapshot(a: SnapshotIdentity, b: SnapshotIdentity): boolean {
@@ -21,8 +22,18 @@ export class MemorySnapshotCache implements SnapshotCache {
   clear() { this.value = null; }
 }
 export async function loadSnapshot(client: ApiClient, cache: SnapshotCache): Promise<CachedSnapshot> {
-  const [today, sleep] = await Promise.all([client.getToday(), client.getLatestSleep()]);
-  const value = { today, sleep, cached_at: new Date().toISOString() };
-  cache.write(value); // Atomic pair: never mix separately acquired input identities.
-  return value;
+  await client.getHealth?.();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    // Windows snapshot readers can contend on the existing nonblocking OS lock.
+    // Acquire sequentially; identity still detects any publication between these reads.
+    const today = await client.getToday();
+    const sleep = await client.getLatestSleep();
+    if (sameSnapshot(today, sleep)) {
+      const value = { today, sleep, cached_at: new Date().toISOString() };
+      cache.write(value); // Atomic pair: never mix separately acquired input identities.
+      return value;
+    }
+  }
+  // No writes on failure: the provider may display the prior pair with an explicit notice.
+  throw new ApiFailure('incoherent_snapshot');
 }

@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Metric, Timing } from '../types/api-v1';
 import { colors, radius, space, typography } from '../design/tokens';
 import { metricText, timeText, type Format } from '../design/format';
-import { reasonCopy } from '../design/copy';
+import { errorCopy, reasonCopy } from '../design/copy';
+import { useDataMode, useReportNotice } from '../api/provider';
 
 export function Copy({ children, kind = 'body', muted = false, style }: PropsWithChildren<{
   kind?: keyof typeof typography; muted?: boolean; style?: StyleProp<TextStyle>;
@@ -12,14 +13,20 @@ export function Copy({ children, kind = 'body', muted = false, style }: PropsWit
   return <Text style={[{ color: muted ? colors.muted : colors.text }, typography[kind], style]}>{children}</Text>;
 }
 export function Page({ children }: PropsWithChildren) {
+  const notice = useReportNotice();
   return <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
     <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      {notice ? <View accessibilityRole="alert" style={styles.section}>
+        <Copy>Showing the last loaded report.</Copy><Copy muted>{errorCopy(notice.failure.code)}</Copy>
+        {notice.failure.retryable && <Pressable accessibilityRole="button" onPress={notice.retry} style={styles.button}><Copy>Try again</Copy></Pressable>}
+      </View> : null}
       {children}
     </ScrollView>
   </SafeAreaView>;
 }
-export function DemoBadge() {
-  return <Copy kind="caption" muted style={{ letterSpacing: 1 }}>SAMPLE DATA · DEMO</Copy>;
+export function DataModeBadge() {
+  const mode = useDataMode();
+  return <Copy kind="caption" muted style={{ letterSpacing: 1 }}>{mode === 'demo' ? 'SAMPLE DATA · DEMO' : mode === 'live-local' ? 'LOCAL DATA' : 'DATA UNAVAILABLE'}</Copy>;
 }
 export function Section({ title, children, value }: PropsWithChildren<{ title: string; value?: string }>) {
   return <View testID={`section-${title}`} style={styles.section}>
@@ -50,24 +57,25 @@ export function SleepTiming({ timing, showOffset = false }: { timing: Timing; sh
   </View>;
 }
 export function QualityNotes({ codes }: { codes: string[] }) {
+  const mode = useDataMode();
   const [expanded, setExpanded] = useState(false);
   return <View style={styles.section}>
     <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={({ pressed }) => [styles.disclosure, { opacity: pressed ? 0.65 : 1 }]}>
       <Copy muted>About these measurements</Copy><Copy muted>{expanded ? '−' : '+'}</Copy>
     </Pressable>
     {expanded ? <View style={{ gap: space.sm }}>
-      <Copy kind="caption" muted>Collection time is unknown. These sample values are for preview only.</Copy>
+      <Copy kind="caption" muted>{mode === 'demo' ? 'Collection time is unknown. These sample values are for preview only.' : 'Collection time is unknown. This report comes from the local snapshot.'}</Copy>
       {[...new Set(codes.map(reasonCopy))].map(copy => <Copy kind="caption" muted key={copy}>{copy}</Copy>)}
     </View> : null}
   </View>;
 }
 export function LoadingState() {
-  return <Page><View style={styles.status}><ActivityIndicator color={colors.accent}/><Copy>Loading your report…</Copy></View></Page>;
+  return <Page><DataModeBadge/><View style={styles.status}><ActivityIndicator color={colors.accent}/><Copy>Loading your report…</Copy></View></Page>;
 }
-export function ErrorState({ retry }: { retry: () => void }) {
-  return <Page><View style={styles.status}><Copy kind="section">Your report couldn’t be loaded</Copy>
-    <Copy muted>Please try again.</Copy>
-    <Pressable accessibilityRole="button" onPress={retry} style={styles.button}><Copy>Try again</Copy></Pressable>
+export function ErrorState({ retry, code = 'internal_error', retryable = true }: { retry: () => void; code?: string; retryable?: boolean }) {
+  return <Page><DataModeBadge/><View style={styles.status}><Copy kind="section">Your report couldn’t be loaded</Copy>
+    <Copy muted>{errorCopy(code)}</Copy>
+    {retryable && <Pressable accessibilityRole="button" onPress={retry} style={styles.button}><Copy>Try again</Copy></Pressable>}
   </View></Page>;
 }
 export const styles = StyleSheet.create({

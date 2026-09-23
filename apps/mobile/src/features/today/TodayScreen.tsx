@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import type { TodayResponse, TodayPhysiology } from '../../types/api-v1';
-import { Copy, DemoBadge, MetricValue, Page, QualityNotes, SleepTiming, styles } from '../../components/ui';
+import { Copy, DataModeBadge, MetricValue, Page, QualityNotes, SleepTiming, styles } from '../../components/ui';
 import { dateText, metricText, type Format } from '../../design/format';
 import { overallCopy, reasonCopy } from '../../design/copy';
 import { colors, space } from '../../design/tokens';
@@ -15,7 +15,7 @@ const measurements: Array<{ key: keyof TodayPhysiology; label: string; format: F
 export function TodayScreen({ response }: { response: TodayResponse }) {
   const { physiology, interpretation, last_sleep: sleep } = response.data;
   return <Page>
-    <View style={{ gap: space.sm }}><Copy kind="caption" muted>{dateText(response.report_date)}</Copy><Copy kind="title">Good morning</Copy><DemoBadge/></View>
+    <View style={{ gap: space.sm }}><Copy kind="caption" muted>{dateText(response.report_date)}</Copy><Copy kind="title">Good morning</Copy><DataModeBadge/></View>
     <View style={styles.grid}>
       {measurements.map(({ key, label, format }) => <View key={key} style={styles.gridCell}>
         <MetricValue label={label} metric={physiology[key].metric} format={format}/>

@@ -59,7 +59,12 @@ const overall: Record<Interpretation['overall_state'], string> = {
 export function overallCopy(code: string): string {
   return ownCopy(overall, code, 'Your picture is still taking shape');
 }
-const errors: Record<ApiError['code'], string> = {
+const errors: Record<ApiError['code'] | 'connection_failed' | 'request_timeout' | 'invalid_response' | 'invalid_configuration' | 'incoherent_snapshot', string> = {
+  connection_failed: 'Cannot connect to the local API. Check that the local server is running, then try again.',
+  request_timeout: 'The local API took too long to respond. Please try again.',
+  invalid_response: 'The local API returned an unsupported report. Check the API version before trying again.',
+  invalid_configuration: 'The data mode or local API address is invalid. Check the development configuration and restart the preview.',
+  incoherent_snapshot: 'The local snapshot changed while loading. Please try again.',
   local_access_only: 'This connection is not available on this device.',
   not_found: 'This report could not be found.', read_only: 'This action is not supported.',
   invalid_query: 'This report request could not be understood.',

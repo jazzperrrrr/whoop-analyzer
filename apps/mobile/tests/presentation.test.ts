@@ -85,7 +85,7 @@ test('cache only publishes coherent pairs and does not replace a good pair on mi
   const first = await loadSnapshot(client, cache);
   expect(cache.read()).toBe(first);
   const sleep = await client.getLatestSleep();
-  await expect(loadSnapshot({ getToday: () => client.getToday(), getLatestSleep: async () => ({ ...sleep, snapshot_id: 'changed' }) }, cache)).rejects.toThrow('Incoherent snapshot');
+  await expect(loadSnapshot({ getToday: () => client.getToday(), getLatestSleep: async () => ({ ...sleep, snapshot_id: 'changed' }) }, cache)).rejects.toMatchObject({ code: 'incoherent_snapshot' });
   expect(cache.read()).toBe(first);
   cache.clear();
   expect(cache.read()).toBeNull();
