@@ -1,0 +1,37 @@
+# Preparation only. Audit the actual EAS archive before any future upload.
+# Keep this allowlist aligned with scripts/privacy.py upload_candidate.
+**
+!app/
+!app/**
+!src/
+!src/**
+!package.json
+!package-lock.json
+!app.json
+!tsconfig.json
+# Defense in depth, including inside otherwise allowed source folders.
+**/data/**
+**/classifications/**
+**/.env*
+**/*token*
+!src/design/tokens.ts
+**/*classification*
+**/*.csv
+**/whoop_response*
+**/whoop_data*
+**/whoop_history*
+**/screenshots/**
+**/screenshot*
+**/logs/**
+**/*.log
+**/node_modules/**
+**/.expo/**
+**/.jest-cache/**
+**/__pycache__/**
+**/.git/**
+**/.venv/**
+**/coverage/**
+**/dist/**
+**/*.bundle
+**/*.map
+**/*.tsbuildinfo

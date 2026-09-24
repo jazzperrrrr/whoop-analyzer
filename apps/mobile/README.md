@@ -4,7 +4,8 @@ An Expo Router / React Native / TypeScript app with **demo as the default** and 
 explicit **live-local** mode for Expo Web on this computer. Both use the frozen
 [API V1 contract](../../docs/API_V1_CONTRACT.md). Live-local reads the existing
 local snapshot through FastAPI; it never calls WHOOP, refreshes tokens or syncs.
-There is no authentication or persistent mobile health-data storage.
+These existing local profiles need no authentication. There is no persistent mobile
+health-data storage; the opt-in device security preparation is documented below.
 
 ## Install and run
 
@@ -212,3 +213,121 @@ Tests use injected mocked fetch, never real local health data. Run `npm run
 typecheck`, `npm test`, `npx --no-install expo install --check`, then the repository
 Python suite. Do not save real API responses, screenshots, credentials or private
 health values as fixtures or test logs.
+
+## Phase 6E-1: native-device security preparation
+
+This is a disabled-by-default security profile, not physical-device connectivity.
+Tailscale is **not installed/configured** by this phase. No Expo development client,
+SecureStore, EAS build, pairing UI or real device token has been installed/created.
+No LAN listener, broad interface binding, public tunnel or firewall change is enabled.
+The existing demo, live-local Web, local API and Dashboard profiles remain separate.
+
+### Future server profile
+
+`WHOOP_API_PROFILE` defaults to `local`; only the explicit value `native-device`
+selects the device gate. Unknown values fail startup safely. Device mode additionally
+requires `WHOOP_DEVICE_HOST` (one exact lowercase DNS hostname, no scheme, port or
+wildcard) and `WHOOP_DEVICE_VERIFIER_FILE` (an absolute path **outside the repository**).
+These are server-only configuration; never copy them into Expo configuration.
+`WHOOP_API_EXPO_WEB=1` and the device profile cannot be enabled together. Use the
+existing Phase 6D process profile for Web development; do not turn device access on
+as a way to repair a Web connection.
+
+The future private HTTPS proxy must preserve that exact Host and forward to a
+loopback-only FastAPI listener. Uvicorn must use `--no-proxy-headers`: the socket
+peer, not `Forwarded`/`X-Forwarded-For`, supplies the loopback check. The device gate
+does not itself create a proxy, TLS listener or network exposure.
+
+In the device profile, **every request** must have a loopback peer, the exact Host,
+one valid Authorization bearer credential, no query string and no browser Origin.
+Only GET `/api/v1/health`, `/api/v1/today`, and `/api/v1/sleep/latest` are allowed.
+There is no unauthenticated localhost-Host exception, trends access, sync, OAuth,
+token route or device CORS allowance. All gate rejections return the same existing
+403 `local_access_only` body shape and generic message; validation reasons are not
+returned or logged. Existing V1 handlers, calculations and schemas are unchanged.
+
+### Verifier and credential boundary
+
+A future approved provisioning step must generate 32 cryptographically random bytes,
+encoded as 64 lowercase hexadecimal characters. This is a separate development
+secret, unrelated to WHOOP access/refresh tokens or client secrets. No provisioning
+command or persistent real token is supplied in this phase. Tests use intentionally
+predictable synthetic inputs only.
+
+The Windows file stores exactly `version` (integer 1), `sha256` (the 64-character
+lowercase SHA-256 hex digest of the ASCII token), and `expires_at` (an explicit UTC
+timestamp in `YYYY-MM-DDTHH:MM:SSZ` format). It never stores the plaintext token.
+The gate hashes the supplied token and uses constant-time digest comparison. It
+re-reads the bounded verifier file on each request: deleting it or replacing the
+digest revokes the old credential immediately; expiry is enforced at its deadline.
+Missing, unreadable or malformed files deny access without exposing paths or details.
+
+Provisioning must place the file outside Git, outside synced/shared folders, with
+Windows ownership/DACL restricted to the intended local user/service and system
+administrators. Directory permissions must also prevent replacement by other users.
+The loader enforces the outside-repository boundary and fails closed on read errors;
+it does **not** provision or audit Windows ACLs. That ACL review is a prerequisite
+before enabling real device access. Never put plaintext in shell arguments, logs,
+README examples, API responses, committed config or `EXPO_PUBLIC_*` variables.
+
+On mobile, `native-device` must be selected explicitly and supplied a runtime
+`device` configuration: `profile: 'native-device'`, an exact `approvedOrigin` using
+HTTPS on its default port, and an asynchronous `credential` callback. The API base
+URL must equal that origin. Only iOS accepts this profile; Web/Android reject it.
+Public environment configuration supplies **no credential callback**, so selecting
+the mode by environment alone cannot activate authenticated access.
+
+Future pairing will supply the callback from SecureStore/iOS Keychain; neither is
+implemented now. Supplying device credentials to demo or Web configuration rejects
+that configuration. The HTTP client adds Authorization only to its three fixed API
+requests, never Metro/assets, and retains timeout/abort, redirect rejection, response
+validation and coherent snapshot acquisition. Credential lookup is inside the timeout;
+if it finishes late, no request is sent. Screens stay transport-agnostic. Before
+physical use, verify redirect/header behavior on the actual native transport as well
+as private HTTPS, Host preservation and loopback socket peers. Mocked tests are not
+a substitute for those device checks.
+
+### Repeatable artifact privacy checks
+
+From the repository root, these read-only commands print rule names and safe artifact
+labels, never offending path contents. They do not fetch API responses or save bundles:
+
+```powershell
+.\.venv\Scripts\python.exe -B apps/mobile/scripts/privacy.py --source --upload-plan
+.\.venv\Scripts\python.exe -B apps/mobile/scripts/privacy.py --development-url http://localhost:8081 --metadata apps/mobile/.expo
+.\.venv\Scripts\python.exe -B apps/mobile/scripts/privacy.py --artifact <future-mobile-upload-or-build-archive>
+```
+
+Findings distinguish `source` repository files, `development` ephemeral Metro
+bundles/metadata/source maps, and `distribution` build/upload artifacts. The scanner
+detects absolute Windows paths (including escaped/URL-encoded forms), user-home
+paths, inline source maps and UTF-16 metadata. It inspects ZIP/IPA/AAB and TAR/TGZ
+members without extraction; unsupported compression, unreadable artifacts and scan
+limits fail closed. The aggregate scan limit is 64 MiB, 4096 items and three nested
+archive levels. This is a path/exclusion gate, not a general secret detector or proof
+that arbitrary compiled/obfuscated artifacts contain no personal data.
+
+The existing development bundle is expected to contain Expo/Metro project-root and
+route-path metadata. Such findings are explicitly **not delivery approval**. Before
+physical-device delivery, scan the actual native manifests, bundles, maps and build
+artifact and remove personal absolute workspace paths. This phase detects rather
+than sanitizes generated artifacts. Do not commit development bundles or use them
+as distributable production artifacts.
+
+### Future EAS upload boundary (no build or upload performed)
+
+The preparatory `.easignore` is deny-by-default: only app/source files and the four
+root app/package/lock/TypeScript config files are candidates. Backend `data/`, `.env`,
+token files, WHOOP CSVs, classifications, logs, screenshots, caches, generated bundles,
+source maps and `node_modules` are excluded. `src/design/tokens.ts` is an explicit
+exception for visual design constants, not authentication tokens. Dependencies are
+installed by the future builder using the unchanged package manifest and lockfile.
+
+`--upload-plan` lists eligible non-ignored mobile source files and scans them; it
+does not claim to reproduce EAS's archive builder. In this repository containing
+private backend data, prepare a clean mobile-only build context from that reviewed
+list, then inspect the actual EAS upload archive before any network upload. Never
+assume private Git, Git ignores or a dry-run candidate list alone proves an upload
+safe. Future new build config/assets must be explicitly reviewed for the allowlist.
+Native signing, provisioning, installation, Keychain integration, private overlay
+networking and end-to-end iPhone verification remain separate approved work.

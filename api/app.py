@@ -18,6 +18,7 @@ from whoop_product.today_service import get_today
 from whoop_product.sleep_service import get_sleep
 from whoop_product.trend_service import get_trend, InvalidTrend
 from .schemas import Health, Error, TodayResponse, SleepResponse, TrendResponse, serialize_product
+from .device_security import DeviceProfile, configured_device_profile
 
 ERRORS = {
     403: ('local_access_only', 'Local access only.'),
@@ -45,7 +46,9 @@ EXPO_WEB_ORIGINS = frozenset(('http://localhost:8081', 'http://127.0.0.1:8081'))
 V1_PATHS = frozenset(('/api/v1/health', '/api/v1/today', '/api/v1/sleep/latest', '/api/v1/trends'))
 
 
-def create_app(repository=None, *, expo_web=False):
+def create_app(repository=None, *, expo_web=False, device_profile: DeviceProfile | None = None):
+    if device_profile is not None and expo_web:
+        raise ValueError('Device and Web profiles must be separate')
     repo = repository if repository is not None else CsvProductRepository()
     application = FastAPI(title='WHOOP read-only product API',version='v1',
                           docs_url=None,redoc_url=None,openapi_url=None,
@@ -66,8 +69,10 @@ def create_app(repository=None, *, expo_web=False):
         # Opt-in transport allowance only. No credentials, wildcard, preflight or new routes.
         expo_origin = (expo_web and local_client and len(origin) == 1
                        and origin[0] in EXPO_WEB_ORIGINS and request.url.path in V1_PATHS)
-        if (not local_client or (origin and origin != ['http://'+host] and not expo_origin)
-                or (request.headers.get('sec-fetch-site')=='cross-site' and not expo_origin)):
+        denied = (not device_profile.permits(request)) if device_profile is not None else (
+            not local_client or (origin and origin != ['http://'+host] and not expo_origin)
+            or (request.headers.get('sec-fetch-site')=='cross-site' and not expo_origin))
+        if denied:
             response = error(request,403,'local_access_only','Local access only.')
         elif request.method != 'GET':
             response = error(request,405,'read_only','This API accepts GET only.')
@@ -122,4 +127,5 @@ def create_app(repository=None, *, expo_web=False):
     return application
 
 
-app = create_app(expo_web=os.environ.get('WHOOP_API_EXPO_WEB') == '1')
+app = create_app(expo_web=os.environ.get('WHOOP_API_EXPO_WEB') == '1',
+                 device_profile=configured_device_profile(os.environ))

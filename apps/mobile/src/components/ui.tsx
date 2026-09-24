@@ -26,7 +26,7 @@ export function Page({ children }: PropsWithChildren) {
 }
 export function DataModeBadge() {
   const mode = useDataMode();
-  return <Copy kind="caption" muted style={{ letterSpacing: 1 }}>{mode === 'demo' ? 'SAMPLE DATA · DEMO' : mode === 'live-local' ? 'LOCAL DATA' : 'DATA UNAVAILABLE'}</Copy>;
+  return <Copy kind="caption" muted style={{ letterSpacing: 1 }}>{mode === 'demo' ? 'SAMPLE DATA · DEMO' : mode === 'live-local' || mode === 'native-device' ? 'LOCAL DATA' : 'DATA UNAVAILABLE'}</Copy>;
 }
 export function Section({ title, children, value }: PropsWithChildren<{ title: string; value?: string }>) {
   return <View testID={`section-${title}`} style={styles.section}>

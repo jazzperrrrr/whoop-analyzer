@@ -3,7 +3,7 @@ import fixtures from './fixtures/api_v1_examples.json';
 import visualDemo from './fixtures/visual_demo.json';
 
 export interface ApiClient {
-  readonly mode?: 'demo' | 'live-local';
+  readonly mode?: 'demo' | 'live-local' | 'native-device';
   getHealth?(): Promise<Health>;
   getToday(): Promise<TodayResponse>;
   getLatestSleep(): Promise<SleepResponse>;
